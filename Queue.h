@@ -2,7 +2,7 @@
 #include "LinkedLists.h"
 using namespace std;
 
-struct MyQueue {
+struct Queue {
     SinglyLinkedList list;
 
     // Добавление элемента в конец очереди

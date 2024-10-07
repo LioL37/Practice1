@@ -2,7 +2,7 @@
 
 using namespace std;
 
-struct MyArray {
+struct Array {
     string* data;       // Указатель на строку
     size_t size;        // Текущий размер массива
     size_t capacity;    // Вместимость массива
@@ -19,13 +19,13 @@ struct MyArray {
     }
 
     // Конструктор по умолчанию
-    MyArray() : data(nullptr), size(0), capacity(0) {}
+    Array() : data(nullptr), size(0), capacity(0) {}
 
     // Конструктор с начальной вместимостью
-    MyArray(size_t initial_capacity) : data(new string[initial_capacity]), size(0), capacity(initial_capacity) {}
+    Array(size_t initial_capacity) : data(new string[initial_capacity]), size(0), capacity(initial_capacity) {}
 
     // Деструктор
-    ~MyArray() {
+    ~Array() {
         delete[] data;
     }
 

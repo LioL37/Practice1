@@ -1,104 +1,119 @@
 #include <iostream>
+#include "json.hpp"
+#include <fstream>
+#include "Array.h"
 
 using namespace std;
+using json = nlohmann::json;
 
-struct CompleteBinaryTree {
-    int* array;  // Массив для хранения элементов дерева
-    int size;    // Текущий размер дерева
-    int capacity; // Максимальная емкость дерева
-
-    CompleteBinaryTree(int initialCapacity = 10) : size(0), capacity(initialCapacity) {
-        array = new int[capacity];
+// Функция для загрузки данных из файла
+json loadDataFromFile(const string& filename) {
+    ifstream file(filename);
+    if (!file.is_open()) {
+        return json::object();
     }
+    json data;
+    file >> data;
+    file.close();
+    return data;
+}
 
-    ~CompleteBinaryTree() {
-        delete[] array;
+// Функция для сохранения данных в файл
+void saveDataToFile(const string& filename, const json& data) {
+    ofstream file(filename);
+    if (!file.is_open()) {
+        throw runtime_error("Failed to open file for writing");
     }
-
-    // Вставка элемента в дерево
-    void insert(int value) {
-        if (size == capacity) {
-            // Если массив заполнен, увеличиваем его вдвое
-            resize(capacity * 2);
-        }
-        array[size++] = value;
-    }
-
-    // Получение элемента по индексу
-    int get(int index) const {
-        if (index < 0 || index >= size) {
-            throw out_of_range("Index out of range");
-        }
-        return array[index];
-    }
-
-    // Получение родительского элемента
-    int getParent(int index) const {
-        if (index <= 0 || index >= size) {
-            throw out_of_range("Invalid index for parent");
-        }
-        return array[(index - 1) / 2];
-    }
-
-    // Получение левого дочернего элемента
-    int getLeftChild(int index) const {
-        int leftChildIndex = 2 * index + 1;
-        if (leftChildIndex >= size) {
-            throw out_of_range("No left child");
-        }
-        return array[leftChildIndex];
-    }
-
-    // Получение правого дочернего элемента
-    int getRightChild(int index) const {
-        int rightChildIndex = 2 * index + 2;
-        if (rightChildIndex >= size) {
-            throw out_of_range("No right child");
-        }
-        return array[rightChildIndex];
-    }
-
-    // Получение текущего размера дерева
-    int getSize() const {
-        return size;
-    }
-
-    // Изменение размера массива
-    void resize(int newCapacity) {
-        int* newArray = new int[newCapacity];
-        for (int i = 0; i < size; ++i) {
-            newArray[i] = array[i];
-        }
-        delete[] array;
-        array = newArray;
-        capacity = newCapacity;
-    }
-
-    // Вывод дерева в виде массива
-    void print() const {
-        for (int i = 0; i < size; ++i) {
-            cout << array[i] << " ";
-        }
-        cout << endl;
-    }
-};
+    file << data.dump(4);
+    file.close();
+}
 
 int main() {
-    CompleteBinaryTree tree;
+    string filename;
+    cout << "Enter filename: ";
+    cin >> filename;
 
-    tree.insert(10);
-    tree.insert(20);
-    tree.insert(30);
-    tree.insert(40);
-    tree.insert(50);
+    json data = loadDataFromFile(filename);
 
-    cout << "Tree elements: ";
-    tree.print();
+    string command;
+    while (true) {
+        cout << "Enter command: ";
+        cin >> command;
 
-    cout << "Element at index 2: " << tree.get(2) << endl;
-    cout << "Parent of element at index 2: " << tree.getParent(2) << endl;
-    cout << "Left child of element at index 1: " << tree.getLeftChild(1) << endl;
-    cout << "Right child of element at index 1: " << tree.getRightChild(1) << endl;
+        string name;
+        int index;
+        string element;
+
+        switch (command[0]) {
+            case 'M':
+                if (command == "MPUSH") {
+                    cin >> name >> index >> element;
+                    if (!data.contains(name)) {
+                        data[name] = json::array();
+                    }
+                    if (index < 0 || index > data[name].size()) {
+                        cout << "Invalid index" << endl;
+                    } else {
+                        data[name].insert(data[name].begin() + index, element);
+                        saveDataToFile(filename, data);
+                    }
+                } else if (command == "MDEL") {
+                    cin >> name >> index;
+                    if (!data.contains(name) || index < 0 || index >= data[name].size()) {
+                        cout << "Invalid array name or index" << endl;
+                    } else {
+                        data[name].erase(data[name].begin() + index);
+                        saveDataToFile(filename, data);
+                    }
+                } else if (command == "MGET") {
+                    cin >> name >> index;
+                    if (!data.contains(name) || index < 0 || index >= data[name].size()) {
+                        cout << "Invalid array name or index" << endl;
+                    } else {
+                        cout << "Element at index " << index << ": " << data[name][index] << endl;
+                    }
+                } else if (command == "MSET") {
+                    cin >> name >> index >> element;
+                    if (!data.contains(name) || index < 0 || index >= data[name].size()) {
+                        cout << "Invalid array name or index" << endl;
+                    } else {
+                        data[name][index] = element;
+                        saveDataToFile(filename, data);
+                    }
+                } else if (command == "MPL") {
+                    cin >> name;
+                    if (!data.contains(name)) {
+                        cout << "Array not found" << endl;
+                    } else {
+                        cout << "Array length: " << data[name].size() << endl;
+                    }
+                } else if (command == "MREAD") {
+                    cin >> name;
+                    if (!data.contains(name)) {
+                        cout << "Array not found" << endl;
+                    } else {
+                        cout << "Array " << name << ": ";
+                        for (const auto& element : data[name]) {
+                            cout << element << " ";
+                        }
+                        cout << endl;
+                    }
+                } else {
+                    cout << "Unknown command" << endl;
+                }
+                break;
+            case 'E':
+                if (command == "EXIT") {
+                    return 0;
+                } else {
+                    cout << "Unknown command" << endl;
+                }
+                break;
+            default:
+                cout << "Unknown command" << endl;
+                break;
+        }
+    }
 
     return 0;
 }
