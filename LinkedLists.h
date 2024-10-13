@@ -1,19 +1,18 @@
 #include <iostream>
 
 using namespace std;
-struct Node {
+struct SinglyLinkedList {
+    struct FLNode {
+        FLNode* next;
         string value;
-        Node* next;
-        Node(const string& val) : value(val), next(nullptr) {}
+        FLNode(const string& val) : value(val), next(nullptr) {}
     };
-struct SinglyLinkedList {   
-    Node* head;
-    Node* tail;
-    SinglyLinkedList() : head(nullptr), tail(nullptr) {}
+    FLNode* head;
+    SinglyLinkedList() : head(nullptr) {}
 
     ~SinglyLinkedList() {
         while (head) {
-            Node* temp = head;
+            FLNode* temp = head;
             head = head->next;
             delete temp;
         }
@@ -21,23 +20,22 @@ struct SinglyLinkedList {
 
     // Добавление элемента в голову
     void addToHead(const string& value) {
-        Node* newNode = new Node(value);
-        if (!head) {
-            head = tail = newNode;
-        } else {
-            newNode->next = head;
-            head = newNode;
-        }
+        FLNode* newNode = new FLNode(value);
+        newNode->next = head;
+        head = newNode;
     }
 
-    // Добавление элемента в хвост
+    // Добавление элемента в хвост (сложность O(n))
     void addToTail(const string& value) {
-        Node* newNode = new Node(value);
-        if (!tail) {
-            head = tail = newNode;
+        FLNode* newNode = new FLNode(value);
+        if (!head) {
+            head = newNode;
         } else {
-            tail->next = newNode;
-            tail = newNode;
+            FLNode* temp = head;
+            while (temp->next) {
+                temp = temp->next;
+            }
+            temp->next = newNode;
         }
     }
 
@@ -46,46 +44,39 @@ struct SinglyLinkedList {
         if (!head) {
             throw runtime_error("List is empty");
         }
-        Node* temp = head;
+        FLNode* temp = head;
         head = head->next;
         delete temp;
-        if (!head) {
-            tail = nullptr;
-        }
     }
 
-    // Удаление элемента с хвоста
+    // Удаление элемента с хвоста (сложность O(n))
     void removeFromTail() {
-        if (!tail) {
+        if (!head) {
             throw runtime_error("List is empty");
         }
-        if (head == tail) {
+        if (!head->next) {
             delete head;
-            head = tail = nullptr;
+            head = nullptr;
         } else {
-            Node* temp = head;
-            while (temp->next != tail) {
+            FLNode* temp = head;
+            while (temp->next->next) {
                 temp = temp->next;
             }
-            delete tail;
-            tail = temp;
-            tail->next = nullptr;
+            delete temp->next;
+            temp->next = nullptr;
         }
     }
 
     // Удаление элемента по значению
     void removeByValue(const string& value) {
-        Node* current = head;
-        Node* previous = nullptr;
+        FLNode* current = head;
+        FLNode* previous = nullptr;
         while (current) {
             if (current->value == value) {
                 if (previous) {
                     previous->next = current->next;
                 } else {
                     head = current->next;
-                }
-                if (current == tail) {
-                    tail = previous;
                 }
                 delete current;
                 return;
@@ -98,7 +89,7 @@ struct SinglyLinkedList {
 
     // Поиск элемента по значению
     bool search(const string& value) const {
-        Node* current = head;
+        FLNode* current = head;
         while (current) {
             if (current->value == value) {
                 return true;
@@ -110,7 +101,7 @@ struct SinglyLinkedList {
 
     // Чтение списка
     void print() const {
-        Node* current = head;
+        FLNode* current = head;
         while (current) {
             cout << current->value << " ";
             current = current->next;
@@ -120,21 +111,21 @@ struct SinglyLinkedList {
 };
 
 struct DoublyLinkedList {
-    struct Node {
+    struct DLNode {
         string value;
-        Node* prev;
-        Node* next;
-        Node(const string& val) : value(val), prev(nullptr), next(nullptr) {}
+        DLNode* prev;
+        DLNode* next;
+        DLNode(const string& val) : value(val), prev(nullptr), next(nullptr) {}
     };
 
-    Node* head;
-    Node* tail;
+    DLNode* head;
+    DLNode* tail;
 
     DoublyLinkedList() : head(nullptr), tail(nullptr) {}
 
     ~DoublyLinkedList() {
         while (head) { // Пока head не nullptr будем удалять узлы
-            Node* temp = head;
+            DLNode* temp = head;
             head = head->next;
             delete temp;
         }
@@ -142,7 +133,7 @@ struct DoublyLinkedList {
 
     // Добавление элемента в голову
     void addToHead(const string& value) {
-        Node* newNode = new Node(value);
+        DLNode* newNode = new DLNode(value);
         if (!head) {
             head = tail = newNode;
         } else {
@@ -154,7 +145,7 @@ struct DoublyLinkedList {
 
     // Добавление элемента в хвост
     void addToTail(const string& value) {
-        Node* newNode = new Node(value);
+        DLNode* newNode = new DLNode(value);
         if (!tail) {
             head = tail = newNode;
         } else {
@@ -169,7 +160,7 @@ struct DoublyLinkedList {
         if (!head) {
             throw runtime_error("List is empty");
         }
-        Node* temp = head;
+        DLNode* temp = head;
         head = head->next;
         if (head) {
             head->prev = nullptr;
@@ -184,7 +175,7 @@ struct DoublyLinkedList {
         if (!tail) {
             throw runtime_error("List is empty");
         }
-        Node* temp = tail;
+        DLNode* temp = tail;
         tail = tail->prev;
         if (tail) {
             tail->next = nullptr;
@@ -196,7 +187,7 @@ struct DoublyLinkedList {
 
     // Удаление элемента по значению
     void removeByValue(const string& value) {
-        Node* current = head;
+        DLNode* current = head;
         while (current) {
             if (current->value == value) {
                 if (current->prev) {
@@ -219,7 +210,7 @@ struct DoublyLinkedList {
 
     // Поиск элемента по значению
     bool search(const string& value) const {
-        Node* current = head;
+        DLNode* current = head;
         while (current) {
             if (current->value == value) {
                 return true;
@@ -231,7 +222,7 @@ struct DoublyLinkedList {
 
     // Чтение списка
     void print() const {
-        Node* current = head;
+        DLNode* current = head;
         while (current) {
             cout << current->value << " ";
             current = current->next;
@@ -239,3 +230,69 @@ struct DoublyLinkedList {
         cout << endl;
     }
 };
+// Функция для чтения односвязного списка из файла
+SinglyLinkedList readSinglyLinkedListFromFile(const string& filename, const string& listName) {
+    ifstream file(filename);
+    string line;
+    SinglyLinkedList list;
+
+    while (getline(file, line)) {
+        if (line.find(listName + "=") == 0) {
+            string data = line.substr(listName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                list.addToTail(item);
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return list;
+}
+
+// Функция для записи односвязного списка в файл
+void writeSinglyLinkedListToFile(const string& filename, const string& listName, const SinglyLinkedList& list) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(listName + "=") == 0) {
+            buffer << listName << "=";
+            SinglyLinkedList::FLNode* current = list.head;
+            while (current) {
+                buffer << current->value;
+                if (current->next) {
+                    buffer << ",";
+                }
+                current = current->next;
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << listName << "=";
+        SinglyLinkedList::FLNode* current = list.head;
+        while (current) {
+            buffer << current->value;
+            if (current->next) {
+                buffer << ",";
+            }
+            current = current->next;
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}

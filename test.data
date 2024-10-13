@@ -1,4 +1,7 @@
-{
-    "test": [
-    ]
-}
+test=data1,data2,data3,data4
+text=data2,data1,data0
+color=Ivan:ugol
+tree=1-4-2-8-9-7-6
+stack=1,2
+queue=3
+cringe=2-3-1-#-#-#-#

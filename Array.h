@@ -92,3 +92,65 @@ struct Array {
         cout << endl;
     }
 };
+// Функция для чтения массива из файла
+Array readArrayFromFile(const string& filename, const string& arrayName) {
+    ifstream file(filename);
+    string line;
+    Array array;
+
+    while (getline(file, line)) {
+        if (line.find(arrayName + "=") == 0) {
+            string data = line.substr(arrayName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                array.push_back(item);
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return array;
+}
+
+// Функция для записи массива в файл
+void writeArrayToFile(const string& filename, const string& arrayName, const Array& array) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(arrayName + "=") == 0) {
+            buffer << arrayName << "=";
+            for (size_t i = 0; i < array.length(); ++i) {
+                buffer << array.get(i);
+                if (i < array.length() - 1) {
+                    buffer << ",";
+                }
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << arrayName << "=";
+        for (size_t i = 0; i < array.length(); ++i) {
+            buffer << array.get(i);
+            if (i < array.length() - 1) {
+                buffer << ",";
+            }
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}

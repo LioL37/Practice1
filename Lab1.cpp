@@ -1,117 +1,323 @@
 #include <iostream>
-#include "json.hpp"
+#include <sstream>
 #include <fstream>
 #include "Array.h"
+#include "LinkedLists.h"
+#include "Queue.h"
+#include "Stack.h"
+#include "HashTable.h"
+#include "CompleteBinaryTree.h"
 
 using namespace std;
-using json = nlohmann::json;
 
-// Функция для загрузки данных из файла
-json loadDataFromFile(const string& filename) {
-    ifstream file(filename);
-    if (!file.is_open()) {
-        return json::object();
-    }
-    json data;
-    file >> data;
-    file.close();
-    return data;
-}
-
-// Функция для сохранения данных в файл
-void saveDataToFile(const string& filename, const json& data) {
-    ofstream file(filename);
-    if (!file.is_open()) {
-        throw runtime_error("Failed to open file for writing");
-    }
-    file << data.dump(4);
-    file.close();
-}
-
+// Основной цикл программы
 int main() {
     string filename;
+
     cout << "Enter filename: ";
     cin >> filename;
 
-    json data = loadDataFromFile(filename);
-
-    string command;
     while (true) {
+        string command;
         cout << "Enter command: ";
         cin >> command;
 
-        string name;
-        int index;
-        string element;
+        if (command == "MPUSH") {
+            string arrayName, value;
+            cin >> arrayName >> value;
 
-        switch (command[0]) {
-            case 'M':
-                if (command == "MPUSH") {
-                    cin >> name >> index >> element;
-                    if (!data.contains(name)) {
-                        data[name] = json::array();
-                    }
-                    if (index < 0 || index > data[name].size()) {
-                        cout << "Invalid index" << endl;
-                    } else {
-                        data[name].insert(data[name].begin() + index, element);
-                        saveDataToFile(filename, data);
-                    }
-                } else if (command == "MDEL") {
-                    cin >> name >> index;
-                    if (!data.contains(name) || index < 0 || index >= data[name].size()) {
-                        cout << "Invalid array name or index" << endl;
-                    } else {
-                        data[name].erase(data[name].begin() + index);
-                        saveDataToFile(filename, data);
-                    }
-                } else if (command == "MGET") {
-                    cin >> name >> index;
-                    if (!data.contains(name) || index < 0 || index >= data[name].size()) {
-                        cout << "Invalid array name or index" << endl;
-                    } else {
-                        cout << "Element at index " << index << ": " << data[name][index] << endl;
-                    }
-                } else if (command == "MSET") {
-                    cin >> name >> index >> element;
-                    if (!data.contains(name) || index < 0 || index >= data[name].size()) {
-                        cout << "Invalid array name or index" << endl;
-                    } else {
-                        data[name][index] = element;
-                        saveDataToFile(filename, data);
-                    }
-                } else if (command == "MPL") {
-                    cin >> name;
-                    if (!data.contains(name)) {
-                        cout << "Array not found" << endl;
-                    } else {
-                        cout << "Array length: " << data[name].size() << endl;
-                    }
-                } else if (command == "MREAD") {
-                    cin >> name;
-                    if (!data.contains(name)) {
-                        cout << "Array not found" << endl;
-                    } else {
-                        cout << "Array " << name << ": ";
-                        for (const auto& element : data[name]) {
-                            cout << element << " ";
-                        }
-                        cout << endl;
-                    }
-                } else {
-                    cout << "Unknown command" << endl;
+            Array array = readArrayFromFile(filename, arrayName);
+            array.push_back(value);
+            writeArrayToFile(filename, arrayName, array);
+        } else if (command == "MPOP") {
+            string arrayName;
+            cin >> arrayName;
+
+            Array array = readArrayFromFile(filename, arrayName);
+            if (array.length() > 0) {
+                array.remove(array.length() - 1);
+                writeArrayToFile(filename, arrayName, array);
+            } else {
+                cout << "Array is empty." << endl;
+            }
+        } else if (command == "MGET") {
+            string arrayName;
+            size_t index;
+            cin >> arrayName >> index;
+
+            Array array = readArrayFromFile(filename, arrayName);
+            if (index < array.length()) {
+                cout << array.get(index) << endl;
+            } else {
+                cout << "Index out of range." << endl;
+            }
+        } else if (command == "MINS") {
+            string arrayName, value;
+            size_t index;
+            cin >> arrayName >> index >> value;
+
+            Array array = readArrayFromFile(filename, arrayName);
+            try {
+                array.insert(index, value);
+                writeArrayToFile(filename, arrayName, array);
+            } catch (const out_of_range& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "MREM") {
+            string arrayName;
+            size_t index;
+            cin >> arrayName >> index;
+
+            Array array = readArrayFromFile(filename, arrayName);
+            try {
+                array.remove(index);
+                writeArrayToFile(filename, arrayName, array);
+            } catch (const out_of_range& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "MSET") {
+            string arrayName, value;
+            size_t index;
+            cin >> arrayName >> index >> value;
+
+            Array array = readArrayFromFile(filename, arrayName);
+            try {
+                array.set(index, value);
+                writeArrayToFile(filename, arrayName, array);
+            } catch (const out_of_range& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "MPRINT") {
+            string arrayName;
+            cin >> arrayName;
+
+            Array array = readArrayFromFile(filename, arrayName);
+            array.print();
+        } else if (command == "LADDH") {
+            string listName, value;
+            cin >> listName >> value;
+
+            SinglyLinkedList list = readSinglyLinkedListFromFile(filename, listName);
+            list.addToHead(value);
+            writeSinglyLinkedListToFile(filename, listName, list);
+        } else if (command == "LADDT") {
+            string listName, value;
+            cin >> listName >> value;
+
+            SinglyLinkedList list = readSinglyLinkedListFromFile(filename, listName);
+            list.addToTail(value);
+            writeSinglyLinkedListToFile(filename, listName, list);
+        } else if (command == "LREMH") {
+            string listName;
+            cin >> listName;
+
+            SinglyLinkedList list = readSinglyLinkedListFromFile(filename, listName);
+            try {
+                list.removeFromHead();
+                writeSinglyLinkedListToFile(filename, listName, list);
+            } catch (const runtime_error& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "LREMT") {
+            string listName;
+            cin >> listName;
+
+            SinglyLinkedList list = readSinglyLinkedListFromFile(filename, listName);
+            try {
+                list.removeFromTail();
+                writeSinglyLinkedListToFile(filename, listName, list);
+            } catch (const runtime_error& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "LREMV") {
+            string listName, value;
+            cin >> listName >> value;
+
+            SinglyLinkedList list = readSinglyLinkedListFromFile(filename, listName);
+            try {
+                list.removeByValue(value);
+                writeSinglyLinkedListToFile(filename, listName, list);
+            } catch (const runtime_error& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "LSEARCH") {
+            string listName, value;
+            cin >> listName >> value;
+
+            SinglyLinkedList list = readSinglyLinkedListFromFile(filename, listName);
+            if (list.search(value)) {
+                cout << "Value found." << endl;
+            } else {
+                cout << "Value not found." << endl;
+            }
+        } else if (command == "LPRINT") {
+            string listName;
+            cin >> listName;
+
+            SinglyLinkedList list = readSinglyLinkedListFromFile(filename, listName);
+            list.print();
+        } else if (command == "QPUSH") {
+            string queueName, value;
+            cin >> queueName >> value;
+
+            Queue queue = readQueueFromFile(filename, queueName);
+            queue.push(value);
+            writeQueueToFile(filename, queueName, queue);
+        } else if (command == "QPOP") {
+            string queueName;
+            cin >> queueName;
+
+            Queue queue = readQueueFromFile(filename, queueName);
+            if (!queue.isEmpty()) {
+                string value = queue.pop();
+                writeQueueToFile(filename, queueName, queue);
+                cout << "Popped value: " << value << endl;
+            } else {
+                cout << "Queue is empty." << endl;
+            }
+        } else if (command == "QPEEK") {
+            string queueName;
+            cin >> queueName;
+
+            Queue queue = readQueueFromFile(filename, queueName);
+            if (!queue.isEmpty()) {
+                cout << "Peeked value: " << queue.peek() << endl;
+            } else {
+                cout << "Queue is empty." << endl;
+            }
+        } else if (command == "QISEMPTY") {
+            string queueName;
+            cin >> queueName;
+
+            Queue queue = readQueueFromFile(filename, queueName);
+            if (queue.isEmpty()) {
+                cout << "Queue is empty." << endl;
+            } else {
+                cout << "Queue is not empty." << endl;
+            }
+        } else if (command == "QPRINT") {
+            string queueName;
+            cin >> queueName;
+
+            Queue queue = readQueueFromFile(filename, queueName);
+            queue.list.print();
+        } else if (command == "SPUSH") {
+            string stackName, value;
+            cin >> stackName >> value;
+
+            Stack stack = readStackFromFile(filename, stackName);
+            stack.push(value);
+            writeStackToFile(filename, stackName, stack);
+        } else if (command == "SPOP") {
+            string stackName;
+            cin >> stackName;
+
+            Stack stack = readStackFromFile(filename, stackName);
+            if (!stack.isEmpty()) {
+                string value = stack.pop();
+                writeStackToFile(filename, stackName, stack);
+                cout << "Popped value: " << value << endl;
+            } else {
+                cout << "Stack is empty." << endl;
+            }
+        } else if (command == "SPEEK") {
+            string stackName;
+            cin >> stackName;
+
+            Stack stack = readStackFromFile(filename, stackName);
+            if (!stack.isEmpty()) {
+                cout << "Peeked value: " << stack.peek() << endl;
+            } else {
+                cout << "Stack is empty." << endl;
+            }
+        } else if (command == "SPRINT") {
+            string stackName;
+            cin >> stackName;
+            Stack stack = readStackFromFile(filename, stackName);
+            stack.list.print();
+        } else if (command == "HINSERT") {
+            string hashTableName, key, value;
+            cin >> hashTableName >> key >> value;
+
+            HashTable hashTable = readHashTableFromFile(filename, hashTableName);
+            hashTable.insert(key, value);
+            writeHashTableToFile(filename, hashTableName, hashTable);
+        } else if (command == "HGET") {
+            string hashTableName, key;
+            cin >> hashTableName >> key;
+
+            HashTable hashTable = readHashTableFromFile(filename, hashTableName);
+            string value = hashTable.get(key);
+            cout << "Value: " << value << endl;
+        } else if (command == "HREMOVE") {
+            string hashTableName, key;
+            cin >> hashTableName >> key;
+
+            HashTable hashTable = readHashTableFromFile(filename, hashTableName);
+            hashTable.remove(key);
+            writeHashTableToFile(filename, hashTableName, hashTable);
+        } else if (command == "HPRINT") {
+            string hashTableName;
+            cin >> hashTableName;
+
+            HashTable hashTable = readHashTableFromFile(filename, hashTableName);
+            for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
+                KeyValuePair* current = hashTable.table.get(i);
+                while (current) {
+                    cout << current->key << ":" << current->value << " ";
+                    current = current->next;
                 }
-                break;
-            case 'E':
-                if (command == "EXIT") {
-                    return 0;
-                } else {
-                    cout << "Unknown command" << endl;
-                }
-                break;
-            default:
-                cout << "Unknown command" << endl;
-                break;
+            }
+            cout << endl;
+        } else if (command == "TINSERT") {
+            string treeName;
+            int value;
+            cin >> treeName >> value;
+
+            CompleteBinaryTree tree = readTreeFromFile(filename, treeName);
+            tree.insert(value);
+            writeTreeToFile(filename, treeName, tree);
+        } else if (command == "TSEARCH") {
+            string treeName;
+            int value;
+            cin >> treeName >> value;
+
+            CompleteBinaryTree tree = readTreeFromFile(filename, treeName);
+            cout << "Index: " << tree.search(value) << endl;
+        } else if (command == "TREMOVE") {
+            string treeName;
+            int value;
+            cin >> treeName >> value;
+
+            CompleteBinaryTree tree = readTreeFromFile(filename, treeName);
+            try {
+                tree.remove(value);
+                writeTreeToFile(filename, treeName, tree);
+            } catch (const out_of_range& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "TGET") {
+            string treeName;
+            int index;
+            cin >> treeName >> index;
+
+            CompleteBinaryTree tree = readTreeFromFile(filename, treeName);
+            try {
+                int value = tree.get(index);
+                cout << "Value at index " << index << ": " << value << endl;
+            } catch (const out_of_range& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "TPRINT") {
+            string treeName;
+            cin >> treeName;
+
+            CompleteBinaryTree tree = readTreeFromFile(filename, treeName);
+            tree.print();
+        } else if (command == "EXIT") {
+            break;
+        } else {
+            cout << "Unknown command." << endl;
         }
     }
 

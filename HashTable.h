@@ -14,11 +14,9 @@ struct KeyValuePair {
 
 // Динамический массив для хранения указателей на KeyValuePair
 struct DynamicArray {
-
     KeyValuePair** array;
     int size;
     int capacity;
-
 
     DynamicArray(int initialCapacity = 10) : size(0), capacity(initialCapacity) {
         array = new KeyValuePair*[capacity];
@@ -51,7 +49,7 @@ struct DynamicArray {
         array[size++] = element;
     }
 
-    KeyValuePair* get(int index) {
+    KeyValuePair* get(int index) const {
         if (index < 0 || index >= capacity) {
             return nullptr;
         }
@@ -74,12 +72,11 @@ struct DynamicArray {
     }
 };
 
-// Хеш-таблица
 struct HashTable {
     DynamicArray table; // Динамический массив для хранения списков KeyValuePair
 
     // Хеш-функция
-    int hashFunction(const string& key) {
+    int hashFunction(const string& key) const {
         int hash = 0;
         for (char c : key) {
             hash += c;
@@ -92,23 +89,32 @@ struct HashTable {
     // Вставка пары ключ-значение в хеш-таблицу
     void insert(const string& key, const string& value) {
         int index = hashFunction(key);
-        KeyValuePair* newPair = new KeyValuePair(key, value);
-
         KeyValuePair* current = table.get(index);
-        if (current == nullptr) {
+
+        // Проверяем, существует ли уже элемент с таким ключом
+        while (current != nullptr) {
+            if (current->key == key) {
+                // Если ключ уже существует, обновляем значение
+                current->value = value;
+                return;
+            }
+            current = current->next;
+        }
+
+        // Если ключ не найден, добавляем новый элемент
+        KeyValuePair* newPair = new KeyValuePair(key, value);
+        if (table.get(index) == nullptr) {
             // Если ячейка пуста, просто добавляем новую пару
             table.set(index, newPair);
         } else {
-            // Если ячейка занята, добавляем новую пару в конец списка
-            while (current->next != nullptr) {
-                current = current->next;
-            }
-            current->next = newPair;
+            // Если ячейка занята, добавляем новую пару в начало списка
+            newPair->next = table.get(index);
+            table.set(index, newPair);
         }
     }
 
     // Получение значения по ключу
-    string get(const string& key) {
+    string get(const string& key) const {
         int index = hashFunction(key);
         KeyValuePair* current = table.get(index);
 
@@ -161,3 +167,78 @@ struct HashTable {
         }
     }
 };
+// Функция для чтения хеш-таблицы из файла
+HashTable readHashTableFromFile(const string& filename, const string& hashTableName) {
+    ifstream file(filename);
+    string line;
+    HashTable hashTable;
+
+    while (getline(file, line)) {
+        if (line.find(hashTableName + "=") == 0) {
+            string data = line.substr(hashTableName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                size_t pos = item.find(':');
+                if (pos != string::npos) {
+                    string key = item.substr(0, pos);
+                    string value = item.substr(pos + 1);
+                    hashTable.insert(key, value);
+                }
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return hashTable;
+}
+
+// Функция для записи хеш-таблицы в файл
+void writeHashTableToFile(const string& filename, const string& hashTableName, const HashTable& hashTable) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(hashTableName + "=") == 0) {
+            buffer << hashTableName << "=";
+            for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
+                KeyValuePair* current = hashTable.table.get(i);
+                while (current) {
+                    buffer << current->key << ":" << current->value;
+                    if (current->next) {
+                        buffer << ",";
+                    }
+                    current = current->next;
+                }
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << hashTableName << "=";
+        for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
+            KeyValuePair* current = hashTable.table.get(i);
+            while (current) {
+                buffer << current->key << ":" << current->value;
+                if (current->next) {
+                    buffer << ",";
+                }
+                current = current->next;
+            }
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}

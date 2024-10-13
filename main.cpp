@@ -2,18 +2,11 @@
 #include <fstream>
 #include <filesystem>
 #include "json.hpp"
+#include "LinkedLists.h"
 
 using namespace std;
 namespace fs = filesystem;
 using json = nlohmann::json;
-
-// Node для хранения данных
-struct Node {
-    string data;
-    Node* next;
-
-    Node(const string& value) : data(value), next(nullptr) {}
-};
 
 // CustomVector для хранения данных в виде списка узлов
 struct CustomVector {
