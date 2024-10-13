@@ -8,6 +8,13 @@ using namespace std;
 namespace fs = filesystem;
 using json = nlohmann::json;
 
+// Структура с узлом для списка
+struct Node {
+        string data;
+        Node* next;
+        Node(const string& val) : data(val), next(nullptr) {}
+};
+
 // CustomVector для хранения данных в виде списка узлов
 struct CustomVector {
     Node* head;

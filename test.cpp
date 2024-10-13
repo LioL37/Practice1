@@ -4,14 +4,15 @@
 
 using namespace std;
 
-struct Array {
-    string* data;       // Указатель на строку
+template<typename T>
+struct CustomVector {
+    T* data;           // Указатель на элементы
     size_t size;        // Текущий размер массива
     size_t capacity;    // Вместимость массива
 
     // Увеличиваем вместимость массива, если необходимо
     void resize(size_t new_capacity) {
-        string* new_data = new string[new_capacity];
+        T* new_data = new T[new_capacity];
         for (size_t i = 0; i < size; ++i) {
             new_data[i] = data[i];
         }
@@ -21,13 +22,13 @@ struct Array {
     }
 
     // Конструктор по умолчанию
-    Array() : data(nullptr), size(0), capacity(0) {}
+    CustomVector() : data(nullptr), size(0), capacity(0) {}
 
     // Конструктор с начальной вместимостью
-    Array(size_t initial_capacity) : data(new string[initial_capacity]), size(0), capacity(initial_capacity) {}
+    CustomVector(size_t initial_capacity) : data(new T[initial_capacity]), size(0), capacity(initial_capacity) {}
 
     // Добавление элемента в конец массива
-    void push_back(const string& value) {
+    void push_back(const T& value) {
         if (size == capacity) {
             resize(capacity == 0 ? 1 : capacity * 2);
         }
@@ -35,7 +36,7 @@ struct Array {
     }
 
     // Добавление элемента по индексу
-    void insert(size_t index, const string& value) {
+    void insert(size_t index, const T& value) {
         if (index > size) {
             throw out_of_range("Index out of range");
         }
@@ -50,7 +51,7 @@ struct Array {
     }
 
     // Получение элемента по индексу
-    string get(size_t index) const {
+    T get(size_t index) const {
         if (index >= size) {
             throw out_of_range("Index out of range");
         }
@@ -69,7 +70,7 @@ struct Array {
     }
 
     // Замена элемента по индексу
-    void set(size_t index, const string& value) {
+    void set(size_t index, const T& value) {
         if (index >= size) {
             throw out_of_range("Index out of range");
         }
@@ -89,73 +90,11 @@ struct Array {
         cout << endl;
     }
 };
-// Функция для чтения массива из файла
-Array readArrayFromFile(const string& filename, const string& arrayName) {
-    ifstream file(filename);
-    string line;
-    Array array;
-
-    while (getline(file, line)) {
-        if (line.find(arrayName + "=") == 0) {
-            string data = line.substr(arrayName.length() + 1);
-            stringstream ss(data);
-            string item;
-            while (getline(ss, item, ',')) {
-                array.push_back(item);
-            }
-            break;
-        }
-    }
-
-    file.close();
-    return array;
-}
-
-// Функция для записи массива в файл
-void writeArrayToFile(const string& filename, const string& arrayName, const Array& array) {
-    ifstream file(filename);
-    stringstream buffer;
-    string line;
-    bool found = false;
-
-    while (getline(file, line)) {
-        if (line.find(arrayName + "=") == 0) {
-            buffer << arrayName << "=";
-            for (size_t i = 0; i < array.length(); ++i) {
-                buffer << array.get(i);
-                if (i < array.length() - 1) {
-                    buffer << ",";
-                }
-            }
-            buffer << endl;
-            found = true;
-        } else {
-            buffer << line << endl;
-        }
-    }
-
-    if (!found) {
-        buffer << arrayName << "=";
-        for (size_t i = 0; i < array.length(); ++i) {
-            buffer << array.get(i);
-            if (i < array.length() - 1) {
-                buffer << ",";
-            }
-        }
-        buffer << endl;
-    }
-
-    file.close();
-
-    ofstream outfile(filename);
-    outfile << buffer.str();
-    outfile.close();
-}
 
 // Структура для хранения пары ключ-значение
 struct KeyValuePair {
     string key;
-    Array value;  // Используем Array для хранения значений
+    CustomVector<string> value;  // Используем CustomVector для хранения значений
     KeyValuePair* next;
 
     KeyValuePair(const string& k) : key(k), next(nullptr) {}
@@ -264,7 +203,7 @@ struct HashTable {
     }
 
     // Получение значений по ключу
-    Array get(const string& key) const {
+    CustomVector<string> get(const string& key) const {
         int index = hashFunction(key);
         KeyValuePair* current = table.get(index);
 
@@ -275,7 +214,7 @@ struct HashTable {
             current = current->next;
         }
 
-        return Array(); // Возвращаем пустой массив, если ключ не найден
+        return CustomVector<string>(); // Возвращаем пустой массив, если ключ не найден
     }
 
     // Удаление пары ключ-значение по ключу
@@ -318,26 +257,32 @@ struct HashTable {
     }
 };
 
-// Функция для чтения хеш-таблицы из файла
-HashTable readHashTableFromFile(const string& filename, const string& hashTableName) {
+// Функция для чтения хеш-таблицы из файла в формате .csv
+HashTable readHashTableFromCSVFile(const string& filename) {
     ifstream file(filename);
     string line;
     HashTable hashTable;
+    CustomVector<string> headers;
 
+    // Читаем заголовки
+    if (getline(file, line)) {
+        stringstream ss(line);
+        string header;
+        while (getline(ss, header, ',')) {
+            headers.push_back(header);
+        }
+    }
+
+    // Читаем данные
     while (getline(file, line)) {
-        if (line.find(hashTableName + "=") == 0) {
-            string data = line.substr(hashTableName.length() + 1);
-            stringstream ss(data);
-            string item;
-            while (getline(ss, item, ',')) {
-                size_t pos = item.find(':');
-                if (pos != string::npos) {
-                    string key = item.substr(0, pos);
-                    string value = item.substr(pos + 1);
-                    hashTable.insert(key, value);
-                }
+        stringstream ss(line);
+        string value;
+        int columnIndex = 0;
+        while (getline(ss, value, ',')) {
+            if (columnIndex < headers.length()) {
+                hashTable.insert(headers.get(columnIndex), value);
             }
-            break;
+            columnIndex++;
         }
     }
 
@@ -345,65 +290,52 @@ HashTable readHashTableFromFile(const string& filename, const string& hashTableN
     return hashTable;
 }
 
-// Функция для записи хеш-таблицы в файл
-void writeHashTableToFile(const string& filename, const string& hashTableName, const HashTable& hashTable) {
-    ifstream file(filename);
-    stringstream buffer;
-    string line;
-    bool found = false;
+// Функция для записи хеш-таблицы в файл в формате .csv
+void writeHashTableToCSVFile(const string& filename, const HashTable& hashTable) {
+    ofstream file(filename);
+    CustomVector<string> headers;
+    CustomVector<CustomVector<string>> columns;
 
-    while (getline(file, line)) {
-        if (line.find(hashTableName + "=") == 0) {
-            buffer << hashTableName << "=";
-            for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
-                KeyValuePair* current = hashTable.table.get(i);
-                while (current) {
-                    buffer << current->key << ":";
-                    for (size_t j = 0; j < current->value.length(); ++j) {
-                        buffer << current->value.get(j);
-                        if (j < current->value.length() - 1) {
-                            buffer << ",";
-                        }
-                    }
-                    if (current->next) {
-                        buffer << ",";
-                    }
-                    current = current->next;
-                }
-            }
-            buffer << endl;
-            found = true;
-        } else {
-            buffer << line << endl;
+    // Собираем заголовки и столбцы
+    for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
+        KeyValuePair* current = hashTable.table.get(i);
+        while (current) {
+            headers.push_back(current->key);
+            columns.push_back(current->value);
+            current = current->next;
         }
     }
 
-    if (!found) {
-        buffer << hashTableName << "=";
-        for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
-            KeyValuePair* current = hashTable.table.get(i);
-            while (current) {
-                buffer << current->key << ":";
-                for (size_t j = 0; j < current->value.length(); ++j) {
-                    buffer << current->value.get(j);
-                    if (j < current->value.length() - 1) {
-                        buffer << ",";
-                    }
-                }
-                if (current->next) {
-                    buffer << ",";
-                }
-                current = current->next;
+    // Записываем заголовки
+    for (size_t i = 0; i < headers.length(); ++i) {
+        file << headers.get(i);
+        if (i < headers.length() - 1) {
+            file << ",";
+        }
+    }
+    file << endl;
+
+    // Записываем данные
+    size_t maxRows = 0;
+    for (size_t i = 0; i < columns.length(); ++i) {
+        if (columns.get(i).length() > maxRows) {
+            maxRows = columns.get(i).length();
+        }
+    }
+
+    for (size_t row = 0; row < maxRows; ++row) {
+        for (size_t col = 0; col < columns.length(); ++col) {
+            if (row < columns.get(col).length()) {
+                file << columns.get(col).get(row);
+            }
+            if (col < columns.length() - 1) {
+                file << ",";
             }
         }
-        buffer << endl;
+        file << endl;
     }
 
     file.close();
-
-    ofstream outfile(filename);
-    outfile << buffer.str();
-    outfile.close();
 }
 
 int main() {
@@ -416,14 +348,14 @@ int main() {
     table.insert("Year", "2021");
 
     // Записываем таблицу в файл
-    writeHashTableToFile("data.txt", "table", table);
+    writeHashTableToCSVFile("data.csv", table);
 
     // Читаем таблицу из файла
-    HashTable readTable = readHashTableFromFile("data.txt", "table");
+    HashTable readTable = readHashTableFromCSVFile("data.csv");
 
     // Выводим данные
-    Array authors = readTable.get("Author");
-    Array years = readTable.get("Year");
+    CustomVector<string> authors = readTable.get("Author");
+    CustomVector<string> years = readTable.get("Year");
 
     cout << "Authors: ";
     authors.print();
