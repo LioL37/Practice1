@@ -1,8 +1,11 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
+#include <filesystem>
+#include "json.hpp"
 
 using namespace std;
+namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 template<typename T>
 struct CustomVector {
@@ -26,6 +29,14 @@ struct CustomVector {
 
     // Конструктор с начальной вместимостью
     CustomVector(size_t initial_capacity) : data(new T[initial_capacity]), size(0), capacity(initial_capacity) {}
+
+    // Деструктор
+    //~CustomVector() {
+    //    if (data != nullptr) {
+    //        delete[] data;
+    //        data = nullptr;
+    //    }
+    //}
 
     // Добавление элемента в конец массива
     void push_back(const T& value) {
@@ -89,6 +100,9 @@ struct CustomVector {
         }
         cout << endl;
     }
+    void begin(){
+
+    }
 };
 
 // Структура для хранения пары ключ-значение
@@ -113,9 +127,9 @@ struct DynamicArray {
         }
     }
 
-    ~DynamicArray() {
-        delete[] array;
-    }
+    //~DynamicArray() {
+    //    delete[] array;
+    //}
 
     void resize(int newCapacity) {
         KeyValuePair** newArray = new KeyValuePair*[newCapacity];
@@ -217,6 +231,21 @@ struct HashTable {
         return CustomVector<string>(); // Возвращаем пустой массив, если ключ не найден
     }
 
+    // Проверка наличия ключа
+    bool contains(const string& key) const {
+        int index = hashFunction(key);
+        KeyValuePair* current = table.get(index);
+
+        while (current != nullptr) {
+            if (current->key == key) {
+                return true;
+            }
+            current = current->next;
+        }
+
+        return false;
+    }
+
     // Удаление пары ключ-значение по ключу
     void remove(const string& key) {
         int index = hashFunction(key);
@@ -244,17 +273,65 @@ struct HashTable {
         delete current;
     }
 
-    // Деструктор для очистки памяти
-    ~HashTable() {
+    // Удаление строк, соответствующих условию
+    void deleteRows(const string& columnName, const string& value) {
         for (int i = 0; i < table.getCapacity(); ++i) {
             KeyValuePair* current = table.get(i);
             while (current != nullptr) {
-                KeyValuePair* next = current->next;
-                delete current;
-                current = next;
+                if (current->key == columnName) {
+                    CustomVector<string>& values = current->value;
+                    for (size_t j = 0; j < values.length(); ++j) {
+                        if (values.get(j) == value) {
+                            // Удаляем строку, соответствующую условию
+                            for (int k = 0; k < table.getCapacity(); ++k) {
+                                KeyValuePair* col = table.get(k);
+                                while (col != nullptr) {
+                                    col->value.remove(j);
+                                    col = col->next;
+                                }
+                            }
+                            --j; // Уменьшаем индекс, так как размер массива уменьшился
+                        }
+                    }
+                }
+                current = current->next;
             }
         }
     }
+
+    // Выполнение cross join и создание новой таблицы
+    HashTable crossJoin(const HashTable& otherTable, const string& column1, const string& column2) const {
+        HashTable resultTable;
+
+        if (!contains(column1) || !otherTable.contains(column2)) {
+            cerr << "Column not found in one of the tables." << endl;
+            return resultTable;
+        }
+
+        CustomVector<string> values1 = get(column1);
+        CustomVector<string> values2 = otherTable.get(column2);
+
+        for (size_t i = 0; i < values1.length(); ++i) {
+            for (size_t j = 0; j < values2.length(); ++j) {
+                resultTable.insert(column1, values1.get(i));
+                resultTable.insert(column2, values2.get(j));
+            }
+        }
+
+        return resultTable;
+    }
+
+    // Деструктор для очистки памяти
+    //~HashTable() {
+    //    for (int i = 0; i < table.getCapacity(); ++i) {
+    //        KeyValuePair* current = table.get(i);
+    //        while (current != nullptr) {
+    //            KeyValuePair* next = current->next;
+    //            delete current;
+    //            current = next;
+    //        }
+    //    }
+    //}
 };
 
 // Функция для чтения хеш-таблицы из файла в формате .csv
@@ -338,30 +415,340 @@ void writeHashTableToCSVFile(const string& filename, const HashTable& hashTable)
     file.close();
 }
 
+// Функция для создания директорий и файлов по схеме json
+void createDirectoryAndFiles(const string& schemaName, const json& structure) {
+    // Создаем директорию с названием схемы
+    fs::create_directory(schemaName);
+
+    // Проходим по всем таблицам в структуре
+    for (const auto& table : structure) {
+        string tableName = table["name"];
+        CustomVector<string> columns;
+
+        // Заполняем CustomVector названиями колонок
+        for (const auto& column : table["columns"]) {
+            columns.push_back(column);
+        }
+
+        // Создаем поддиректорию для таблицы
+        fs::path tablePath = fs::path(schemaName) / tableName;
+        fs::create_directory(tablePath);
+
+        // Создаем файл 1.csv в поддиректории таблицы
+        fs::path filePath = tablePath / "1.csv";
+        ofstream file(filePath);
+        if (file.is_open()) {
+            // Записываем названия колонок в файл
+            for (size_t i = 0; i < columns.length(); ++i) {
+                file << columns.get(i);
+                if (i < columns.length() - 1) {
+                    file << ",";
+                }
+            }
+            file << endl; // Добавляем перевод строки в конце
+            file.close();
+            cout << "Created file: " << filePath << endl;
+        } else {
+            cerr << "Failed to create file: " << filePath << endl;
+        }
+    }
+}
+
+// Функция для парсинга команды INSERT INTO
+void parseInsertCommand(const string& command, string& tableName, CustomVector<string>& values) {
+    int i = 0;
+
+    // Пропускаем "INSERT INTO "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем имя таблицы
+    int start = i;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    tableName = command.substr(start, i - start);
+
+    // Пропускаем " VALUES "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Пропускаем открывающую скобку
+    if (command[i] == '(') i++;
+
+    string substr; // Подстрока для сохранения данных
+    bool inQuotes = false; // Флаг для отслеживания, находимся ли мы внутри кавычек
+
+    // Парсим значения
+    while (command[i] != '\0') {
+        // Пропускаем открывающую кавычку
+        if (command[i] == '\'') {
+            inQuotes = !inQuotes;
+            i++;
+            continue;
+        }
+
+        // Если мы внутри кавычек, добавляем символы в substr
+        if (inQuotes) {
+            substr += command[i];
+        } else {
+            // Если мы вне кавычек и встречаем запятую или закрывающую скобку, добавляем значение в values
+            if (command[i] == ',' || command[i] == ')') {
+                values.push_back(substr);
+                substr.clear(); // Очищаем substr для следующего значения
+            }
+        }
+        i++;
+    }
+
+    // Добавляем последнее значение, если оно есть
+    if (!substr.empty()) {
+        values.push_back(substr);
+    }
+}
+
+// Функция для вставки данных в таблицу
+void insertIntoTable(const string& schemaName, const string& tableName, const CustomVector<string>& values) {
+    fs::path filePath = fs::path(schemaName) / tableName / "1.csv";
+    ofstream file(filePath, ios::app); // Открываем файл в режиме добавления
+    if (file.is_open()) {
+        for (size_t i = 0; i < values.length(); ++i) {
+            file << values.get(i);
+            if (i < values.length() - 1) {
+                file << ",";
+            }
+        }
+        file << endl; // Добавляем перевод строки в конце
+        file.close();
+        cout << "Inserted into table: " << tableName << endl;
+    } else {
+        cerr << "Failed to open file: " << filePath << endl;
+    }
+}
+
+// Функция для парсинга команды DELETE FROM
+void parseDeleteCommand(const string& command, string& tableName, string& columnName, string& value) {
+    int i = 0;
+
+    // Пропускаем "DELETE FROM "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем имя таблицы
+    int start = i;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    tableName = command.substr(start, i - start);
+
+    // Пропускаем " WHERE "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем имя колонки
+    start = i;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    columnName = command.substr(start, i - start);
+
+    // Пропускаем " = "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем значение
+    start = i;
+    while (command[i] != '\0' && command[i] != '\'') i++;
+    value = command.substr(start, i - start);
+}
+
+// Функция для удаления данных из таблицы
+void deleteFromTable(const string& schemaName, const string& tableName, const string& columnName, const string& value) {
+    fs::path filePath = fs::path(schemaName) / tableName / "1.csv";
+    HashTable hashTable = readHashTableFromCSVFile(filePath.string());
+    hashTable.deleteRows(columnName, value);
+    writeHashTableToCSVFile(filePath.string(), hashTable);
+    cout << "Deleted from table: " << tableName << endl;
+}
+
+// Функция для парсинга команды SELECT FROM
+void parseSelectCommand(const string& command, CustomVector<string>& columns, CustomVector<string>& tables) {
+    int i = 0;
+    string column;
+    string table;
+
+    // Пропускаем "SELECT "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем колонки
+    while (command[i] != '\0' && command[i] != ' ') {
+        if (command[i] == ',') {
+            columns.push_back(column);
+            column.clear();
+        } else if (command[i] == '.') {
+            table = column;
+            column.clear();
+        } else {
+            column += command[i];
+        }
+        i++;
+    }
+    columns.push_back(column);
+
+    // Пропускаем "FROM "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем таблицы
+    while (command[i] != '\0') {
+        if (command[i] == ',') {
+            tables.push_back(table);
+            table.clear();
+        } else {
+            table += command[i];
+        }
+        i++;
+    }
+    tables.push_back(table);
+}
+
+// Функция для выполнения команды SELECT FROM
+void selectFromTables(const string& schemaName, const CustomVector<string>& columns, const CustomVector<string>& tables) {
+    CustomVector<HashTable> hashTables;
+    CustomVector<string> headers;
+
+    // Загружаем таблицы
+    for (size_t i = 0; i < tables.length(); ++i) {
+        fs::path filePath = fs::path(schemaName) / tables.get(i) / "1.csv";
+        hashTables.push_back(readHashTableFromCSVFile(filePath.string()));
+    }
+
+    // Создаем заголовки
+    for (size_t i = 0; i < columns.length(); ++i) {
+        headers.push_back(columns.get(i));
+    }
+
+    // Выводим заголовки
+    for (size_t i = 0; i < headers.length(); ++i) {
+        cout << headers.get(i);
+        if (i < headers.length() - 1) {
+            cout << ",";
+        }
+    }
+    cout << endl;
+
+    // Сопоставляем колонки с таблицами
+    CustomVector<string> tableNames;
+    CustomVector<string> columnNames;
+    for (size_t i = 0; i < columns.length(); ++i) {
+        string column = columns.get(i);
+        size_t dotPos = -1;
+        for (size_t j = 0; j < column.length(); ++j) {
+            if (column[j] == '.') {
+                dotPos = j;
+                break;
+            }
+        }
+        if (dotPos != -1) {
+            string tableName = column.substr(0, dotPos);
+            string columnName = column.substr(dotPos + 1);
+            tableNames.push_back(tableName);
+            columnNames.push_back(columnName);
+        } else {
+            // Если имя колонки не содержит точки, считаем, что это колонка из первой таблицы
+            tableNames.push_back(tables.get(0));
+            columnNames.push_back(column);
+        }
+    }
+
+    // Выводим данные с cross join
+    size_t maxRows = 0;
+    for (size_t i = 0; i < tableNames.length(); ++i) {
+        string tableName = tableNames.get(i);
+        string columnName = columnNames.get(i);
+        for (size_t j = 0; j < hashTables.length(); ++j) {
+            if (tables.get(j) == tableName) {
+                CustomVector<string> values = hashTables.get(j).get(columnName);
+                if (values.length() > maxRows) {
+                    maxRows = values.length();
+                }
+            }
+        }
+    }
+
+    for (size_t row = 0; row < maxRows; ++row) {
+        for (size_t i = 0; i < tableNames.length(); ++i) {
+            string tableName = tableNames.get(i);
+            string columnName = columnNames.get(i);
+            for (size_t j = 0; j < hashTables.length(); ++j) {
+                if (tables.get(j) == tableName) {
+                    CustomVector<string> values = hashTables.get(j).get(columnName);
+                    if (row < values.length()) {
+                        cout << values.get(row);
+                    } else {
+                        cout << ""; // Если строки не хватает, выводим пустую строку
+                    }
+                    if (i < tableNames.length() - 1) {
+                        cout << ",";
+                    }
+                }
+            }
+        }
+        cout << endl;
+    }
+}
+
 int main() {
-    HashTable table;
+    // Путь к файлу конфигурации
+    string configFilePath = "schema.json";
 
-    // Добавляем данные в таблицу
-    table.insert("Author", "John Doe");
-    table.insert("Author", "Jane Smith");
-    table.insert("Year", "2020");
-    table.insert("Year", "2021");
+    // Открываем файл конфигурации
+    ifstream configFile(configFilePath);
 
-    // Записываем таблицу в файл
-    writeHashTableToCSVFile("data.csv", table);
+    // Читаем JSON из файла
+    json config;
+    configFile >> config;
 
-    // Читаем таблицу из файла
-    HashTable readTable = readHashTableFromCSVFile("data.csv");
+    // Получаем название схемы и структуру таблиц
+    string schemaName = config["name"];
+    json structure = config["structure"];
 
-    // Выводим данные
-    CustomVector<string> authors = readTable.get("Author");
-    CustomVector<string> years = readTable.get("Year");
+    // Создаем директории и файлы
+    //createDirectoryAndFiles(schemaName, structure);
 
-    cout << "Authors: ";
-    authors.print();
+    // Ожидаем ввода команд из консоли
+    while (true) {
+        cout << "Enter command (or 'exit' to quit): ";
+        string command;
+        getline(cin, command);
 
-    cout << "Years: ";
-    years.print();
+        if (command == "exit") {
+            break;
+        }
+
+        if (command.substr(0, 12) == "INSERT INTO ") {
+            string tableName;
+            CustomVector<string> values;
+            parseInsertCommand(command, tableName, values);
+            insertIntoTable(schemaName, tableName, values);
+        } else if (command.substr(0, 12) == "DELETE FROM ") {
+            string tableName, columnName, value;
+            parseDeleteCommand(command, tableName, columnName, value);
+            deleteFromTable(schemaName, tableName, columnName, value);
+        } else if (command.substr(0, 7) == "SELECT ") {
+            CustomVector<string> columns;
+            CustomVector<string> tables;
+            parseSelectCommand(command, columns, tables);
+            selectFromTables(schemaName, columns, tables);
+        } else {
+            cout << "Unknown command" << endl;
+        }
+    }
 
     return 0;
 }

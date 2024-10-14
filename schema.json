@@ -3,11 +3,11 @@
   "structure": [
     {
       "name": "table1",
-      "columns": ["колонка1", "колонка2"]
+      "columns": ["column1", "column2"]
     },
     {
       "name": "table2",
-      "columns": ["колонка1", "колонка2", "колонка3", "колонка4"]
+      "columns": ["column1", "column2", "column3", "column4"]
     }
   ]
 }

@@ -1,17 +1,21 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
+#include <filesystem>
+#include "json.hpp"
 
 using namespace std;
+namespace fs = std::filesystem;
+using json = nlohmann::json;
 
-struct Array {
-    string* data;       // Указатель на строку
+template<typename T>
+struct CustomVector {
+    T* data;           // Указатель на элементы
     size_t size;        // Текущий размер массива
     size_t capacity;    // Вместимость массива
 
     // Увеличиваем вместимость массива, если необходимо
     void resize(size_t new_capacity) {
-        string* new_data = new string[new_capacity];
+        T* new_data = new T[new_capacity];
         for (size_t i = 0; i < size; ++i) {
             new_data[i] = data[i];
         }
@@ -21,13 +25,13 @@ struct Array {
     }
 
     // Конструктор по умолчанию
-    Array() : data(nullptr), size(0), capacity(0) {}
+    CustomVector() : data(nullptr), size(0), capacity(0) {}
 
     // Конструктор с начальной вместимостью
-    Array(size_t initial_capacity) : data(new string[initial_capacity]), size(0), capacity(initial_capacity) {}
+    CustomVector(size_t initial_capacity) : data(new T[initial_capacity]), size(0), capacity(initial_capacity) {}
 
     // Добавление элемента в конец массива
-    void push_back(const string& value) {
+    void push_back(const T& value) {
         if (size == capacity) {
             resize(capacity == 0 ? 1 : capacity * 2);
         }
@@ -35,7 +39,7 @@ struct Array {
     }
 
     // Добавление элемента по индексу
-    void insert(size_t index, const string& value) {
+    void insert(size_t index, const T& value) {
         if (index > size) {
             throw out_of_range("Index out of range");
         }
@@ -50,7 +54,7 @@ struct Array {
     }
 
     // Получение элемента по индексу
-    string get(size_t index) const {
+    T get(size_t index) const {
         if (index >= size) {
             throw out_of_range("Index out of range");
         }
@@ -69,7 +73,7 @@ struct Array {
     }
 
     // Замена элемента по индексу
-    void set(size_t index, const string& value) {
+    void set(size_t index, const T& value) {
         if (index >= size) {
             throw out_of_range("Index out of range");
         }
@@ -89,73 +93,11 @@ struct Array {
         cout << endl;
     }
 };
-// Функция для чтения массива из файла
-Array readArrayFromFile(const string& filename, const string& arrayName) {
-    ifstream file(filename);
-    string line;
-    Array array;
-
-    while (getline(file, line)) {
-        if (line.find(arrayName + "=") == 0) {
-            string data = line.substr(arrayName.length() + 1);
-            stringstream ss(data);
-            string item;
-            while (getline(ss, item, ',')) {
-                array.push_back(item);
-            }
-            break;
-        }
-    }
-
-    file.close();
-    return array;
-}
-
-// Функция для записи массива в файл
-void writeArrayToFile(const string& filename, const string& arrayName, const Array& array) {
-    ifstream file(filename);
-    stringstream buffer;
-    string line;
-    bool found = false;
-
-    while (getline(file, line)) {
-        if (line.find(arrayName + "=") == 0) {
-            buffer << arrayName << "=";
-            for (size_t i = 0; i < array.length(); ++i) {
-                buffer << array.get(i);
-                if (i < array.length() - 1) {
-                    buffer << ",";
-                }
-            }
-            buffer << endl;
-            found = true;
-        } else {
-            buffer << line << endl;
-        }
-    }
-
-    if (!found) {
-        buffer << arrayName << "=";
-        for (size_t i = 0; i < array.length(); ++i) {
-            buffer << array.get(i);
-            if (i < array.length() - 1) {
-                buffer << ",";
-            }
-        }
-        buffer << endl;
-    }
-
-    file.close();
-
-    ofstream outfile(filename);
-    outfile << buffer.str();
-    outfile.close();
-}
 
 // Структура для хранения пары ключ-значение
 struct KeyValuePair {
     string key;
-    Array value;  // Используем Array для хранения значений
+    CustomVector<string> value;  // Используем CustomVector для хранения значений
     KeyValuePair* next;
 
     KeyValuePair(const string& k) : key(k), next(nullptr) {}
@@ -264,7 +206,7 @@ struct HashTable {
     }
 
     // Получение значений по ключу
-    Array get(const string& key) const {
+    CustomVector<string> get(const string& key) const {
         int index = hashFunction(key);
         KeyValuePair* current = table.get(index);
 
@@ -275,7 +217,22 @@ struct HashTable {
             current = current->next;
         }
 
-        return Array(); // Возвращаем пустой массив, если ключ не найден
+        return CustomVector<string>(); // Возвращаем пустой массив, если ключ не найден
+    }
+
+    // Проверка наличия ключа
+    bool contains(const string& key) const {
+        int index = hashFunction(key);
+        KeyValuePair* current = table.get(index);
+
+        while (current != nullptr) {
+            if (current->key == key) {
+                return true;
+            }
+            current = current->next;
+        }
+
+        return false;
     }
 
     // Удаление пары ключ-значение по ключу
@@ -305,6 +262,54 @@ struct HashTable {
         delete current;
     }
 
+    // Удаление строк, соответствующих условию
+    void deleteRows(const string& columnName, const string& value) {
+        for (int i = 0; i < table.getCapacity(); ++i) {
+            KeyValuePair* current = table.get(i);
+            while (current != nullptr) {
+                if (current->key == columnName) {
+                    CustomVector<string>& values = current->value;
+                    for (size_t j = 0; j < values.length(); ++j) {
+                        if (values.get(j) == value) {
+                            // Удаляем строку, соответствующую условию
+                            for (int k = 0; k < table.getCapacity(); ++k) {
+                                KeyValuePair* col = table.get(k);
+                                while (col != nullptr) {
+                                    col->value.remove(j);
+                                    col = col->next;
+                                }
+                            }
+                            --j; // Уменьшаем индекс, так как размер массива уменьшился
+                        }
+                    }
+                }
+                current = current->next;
+            }
+        }
+    }
+
+    // Выполнение cross join и создание новой таблицы
+    HashTable crossJoin(const HashTable& otherTable, const string& column1, const string& column2) const {
+        HashTable resultTable;
+
+        if (!contains(column1) || !otherTable.contains(column2)) {
+            cerr << "Column not found in one of the tables." << endl;
+            return resultTable;
+        }
+
+        CustomVector<string> values1 = get(column1);
+        CustomVector<string> values2 = otherTable.get(column2);
+
+        for (size_t i = 0; i < values1.length(); ++i) {
+            for (size_t j = 0; j < values2.length(); ++j) {
+                resultTable.insert(column1, values1.get(i));
+                resultTable.insert(column2, values2.get(j));
+            }
+        }
+
+        return resultTable;
+    }
+
     // Деструктор для очистки памяти
     ~HashTable() {
         for (int i = 0; i < table.getCapacity(); ++i) {
@@ -318,26 +323,32 @@ struct HashTable {
     }
 };
 
-// Функция для чтения хеш-таблицы из файла
-HashTable readHashTableFromFile(const string& filename, const string& hashTableName) {
+// Функция для чтения хеш-таблицы из файла в формате .csv
+HashTable readHashTableFromCSVFile(const string& filename) {
     ifstream file(filename);
     string line;
     HashTable hashTable;
+    CustomVector<string> headers;
 
+    // Читаем заголовки
+    if (getline(file, line)) {
+        stringstream ss(line);
+        string header;
+        while (getline(ss, header, ',')) {
+            headers.push_back(header);
+        }
+    }
+
+    // Читаем данные
     while (getline(file, line)) {
-        if (line.find(hashTableName + "=") == 0) {
-            string data = line.substr(hashTableName.length() + 1);
-            stringstream ss(data);
-            string item;
-            while (getline(ss, item, ',')) {
-                size_t pos = item.find(':');
-                if (pos != string::npos) {
-                    string key = item.substr(0, pos);
-                    string value = item.substr(pos + 1);
-                    hashTable.insert(key, value);
-                }
+        stringstream ss(line);
+        string value;
+        int columnIndex = 0;
+        while (getline(ss, value, ',')) {
+            if (columnIndex < headers.length()) {
+                hashTable.insert(headers.get(columnIndex), value);
             }
-            break;
+            columnIndex++;
         }
     }
 
@@ -345,91 +356,333 @@ HashTable readHashTableFromFile(const string& filename, const string& hashTableN
     return hashTable;
 }
 
-// Функция для записи хеш-таблицы в файл
-void writeHashTableToFile(const string& filename, const string& hashTableName, const HashTable& hashTable) {
-    ifstream file(filename);
-    stringstream buffer;
-    string line;
-    bool found = false;
+// Функция для записи хеш-таблицы в файл в формате .csv
+void writeHashTableToCSVFile(const string& filename, const HashTable& hashTable) {
+    ofstream file(filename);
+    CustomVector<string> headers;
+    CustomVector<CustomVector<string>> columns;
 
-    while (getline(file, line)) {
-        if (line.find(hashTableName + "=") == 0) {
-            buffer << hashTableName << "=";
-            for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
-                KeyValuePair* current = hashTable.table.get(i);
-                while (current) {
-                    buffer << current->key << ":";
-                    for (size_t j = 0; j < current->value.length(); ++j) {
-                        buffer << current->value.get(j);
-                        if (j < current->value.length() - 1) {
-                            buffer << ",";
-                        }
-                    }
-                    if (current->next) {
-                        buffer << ",";
-                    }
-                    current = current->next;
-                }
-            }
-            buffer << endl;
-            found = true;
-        } else {
-            buffer << line << endl;
+    // Собираем заголовки и столбцы
+    for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
+        KeyValuePair* current = hashTable.table.get(i);
+        while (current) {
+            headers.push_back(current->key);
+            columns.push_back(current->value);
+            current = current->next;
         }
     }
 
-    if (!found) {
-        buffer << hashTableName << "=";
-        for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
-            KeyValuePair* current = hashTable.table.get(i);
-            while (current) {
-                buffer << current->key << ":";
-                for (size_t j = 0; j < current->value.length(); ++j) {
-                    buffer << current->value.get(j);
-                    if (j < current->value.length() - 1) {
-                        buffer << ",";
-                    }
-                }
-                if (current->next) {
-                    buffer << ",";
-                }
-                current = current->next;
+    // Записываем заголовки
+    for (size_t i = 0; i < headers.length(); ++i) {
+        file << headers.get(i);
+        if (i < headers.length() - 1) {
+            file << ",";
+        }
+    }
+    file << endl;
+
+    // Записываем данные
+    size_t maxRows = 0;
+    for (size_t i = 0; i < columns.length(); ++i) {
+        if (columns.get(i).length() > maxRows) {
+            maxRows = columns.get(i).length();
+        }
+    }
+
+    for (size_t row = 0; row < maxRows; ++row) {
+        for (size_t col = 0; col < columns.length(); ++col) {
+            if (row < columns.get(col).length()) {
+                file << columns.get(col).get(row);
+            }
+            if (col < columns.length() - 1) {
+                file << ",";
             }
         }
-        buffer << endl;
+        file << endl;
     }
 
     file.close();
+}
 
-    ofstream outfile(filename);
-    outfile << buffer.str();
-    outfile.close();
+// Функция для создания директорий и файлов по схеме json
+void createDirectoryAndFiles(const string& schemaName, const json& structure) {
+    // Создаем директорию с названием схемы
+    fs::create_directory(schemaName);
+
+    // Проходим по всем таблицам в структуре
+    for (const auto& table : structure) {
+        string tableName = table["name"];
+        CustomVector<string> columns;
+
+        // Заполняем CustomVector названиями колонок
+        for (const auto& column : table["columns"]) {
+            columns.push_back(column);
+        }
+
+        // Создаем поддиректорию для таблицы
+        fs::path tablePath = fs::path(schemaName) / tableName;
+        fs::create_directory(tablePath);
+
+        // Создаем файл 1.csv в поддиректории таблицы
+        fs::path filePath = tablePath / "1.csv";
+        ofstream file(filePath);
+        if (file.is_open()) {
+            // Записываем названия колонок в файл
+            for (size_t i = 0; i < columns.length(); ++i) {
+                file << columns.get(i);
+                if (i < columns.length() - 1) {
+                    file << ",";
+                }
+            }
+            file << endl; // Добавляем перевод строки в конце
+            file.close();
+            cout << "Created file: " << filePath << endl;
+        } else {
+            cerr << "Failed to create file: " << filePath << endl;
+        }
+    }
+}
+
+// Функция для парсинга команды INSERT INTO
+void parseInsertCommand(const string& command, string& tableName, CustomVector<string>& values) {
+    int i = 0;
+
+    // Пропускаем "INSERT INTO "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем имя таблицы
+    int start = i;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    tableName = command.substr(start, i - start);
+
+    // Пропускаем " VALUES "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Пропускаем открывающую скобку
+    if (command[i] == '(') i++;
+
+    string substr; // Подстрока для сохранения данных
+    bool inQuotes = false; // Флаг для отслеживания, находимся ли мы внутри кавычек
+
+    // Парсим значения
+    while (command[i] != '\0') {
+        // Пропускаем открывающую кавычку
+        if (command[i] == '\'') {
+            inQuotes = !inQuotes;
+            i++;
+            continue;
+        }
+
+        // Если мы внутри кавычек, добавляем символы в substr
+        if (inQuotes) {
+            substr += command[i];
+        } else {
+            // Если мы вне кавычек и встречаем запятую или закрывающую скобку, добавляем значение в values
+            if (command[i] == ',' || command[i] == ')') {
+                values.push_back(substr);
+                substr.clear(); // Очищаем substr для следующего значения
+            }
+        }
+        i++;
+    }
+
+    // Добавляем последнее значение, если оно есть
+    if (!substr.empty()) {
+        values.push_back(substr);
+    }
+}
+
+// Функция для вставки данных в таблицу
+void insertIntoTable(const string& schemaName, const string& tableName, const CustomVector<string>& values) {
+    fs::path filePath = fs::path(schemaName) / tableName / "1.csv";
+    ofstream file(filePath, ios::app); // Открываем файл в режиме добавления
+    if (file.is_open()) {
+        for (size_t i = 0; i < values.length(); ++i) {
+            file << values.get(i);
+            if (i < values.length() - 1) {
+                file << ",";
+            }
+        }
+        file << endl; // Добавляем перевод строки в конце
+        file.close();
+        cout << "Inserted into table: " << tableName << endl;
+    } else {
+        cerr << "Failed to open file: " << filePath << endl;
+    }
+}
+
+// Функция для парсинга команды DELETE FROM
+void parseDeleteCommand(const string& command, string& tableName, string& columnName, string& value) {
+    int i = 0;
+
+    // Пропускаем "DELETE FROM "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем имя таблицы
+    int start = i;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    tableName = command.substr(start, i - start);
+
+    // Пропускаем " WHERE "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем имя колонки
+    start = i;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    columnName = command.substr(start, i - start);
+
+    // Пропускаем " = "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем значение
+    start = i;
+    while (command[i] != '\0' && command[i] != '\'') i++;
+    value = command.substr(start, i - start);
+}
+
+// Функция для удаления данных из таблицы
+void deleteFromTable(const string& schemaName, const string& tableName, const string& columnName, const string& value) {
+    fs::path filePath = fs::path(schemaName) / tableName / "1.csv";
+    HashTable hashTable = readHashTableFromCSVFile(filePath.string());
+    hashTable.deleteRows(columnName, value);
+    writeHashTableToCSVFile(filePath.string(), hashTable);
+    cout << "Deleted from table: " << tableName << endl;
+}
+
+// Функция для парсинга команды SELECT FROM
+void parseSelectCommand(const string& command, string& tableName1, string& tableName2, string& columnName1, string& columnName2) {
+    int i = 0;
+    string tName1;
+    string tName2;
+    // Пропускаем "SELECT "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем имя таблицы и колонки
+    while (command[i] != '\0' && command[i] != '.') {
+        tableName1 += command[i];
+        i++;
+    };
+    i++;
+    while (command[i] != '\0' && command[i] != ',') {
+        columnName1 += command[i];
+        i++;
+    };
+    i++;
+
+    // Получаем имя таблицы и колонки
+    while (command[i] != '\0' && command[i] != '.') {
+        tableName2 += command[i];
+        i++;
+    };
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') {
+        columnName2 += command[i];
+        i++;
+    };
+    i++;
+
+    // Пропускаем "FROM "
+    while (command[i] != '\0' && command[i] != ' ') i++;
+    i++;
+
+    // Получаем имена таблиц
+    while (command[i] != '\0' && command[i] != ',') {
+        tName1 += command[i];
+        i++;
+    };
+    i++;
+    while (command[i] != '\0' && command[i] != ' ') {
+        tName2 += command[i];
+        i++;
+    };
+}
+
+// Функция для выполнения команды SELECT FROM
+void selectFromTables(const string& schemaName, const string& tableName1, const string& tableName2, const string& columnName1, const string& columnName2) {
+    fs::path filePath1 = fs::path(schemaName) / tableName1 / "1.csv";
+    fs::path filePath2 = fs::path(schemaName) / tableName2 / "1.csv";
+
+    HashTable hashTable1 = readHashTableFromCSVFile(filePath1.string());
+    HashTable hashTable2 = readHashTableFromCSVFile(filePath2.string());
+
+    HashTable resultTable = hashTable1.crossJoin(hashTable2, columnName1, columnName2);
+
+    // Выводим результат в консоль
+    CustomVector<string> headers;
+    headers.push_back(columnName1);
+    headers.push_back(columnName2);
+
+    cout << headers.get(0) << "," << headers.get(1) << endl;
+
+    CustomVector<string> values1 = resultTable.get(columnName1);
+    CustomVector<string> values2 = resultTable.get(columnName2);
+
+    for (size_t i = 0; i < values1.length(); ++i) {
+        cout << values1.get(i) << "," << values2.get(i) << endl;
+    }
 }
 
 int main() {
-    HashTable table;
+    // Путь к файлу конфигурации
+    string configFilePath = "schema.json";
 
-    // Добавляем данные в таблицу
-    table.insert("Author", "John Doe");
-    table.insert("Author", "Jane Smith");
-    table.insert("Year", "2020");
-    table.insert("Year", "2021");
+    // Открываем файл конфигурации
+    ifstream configFile(configFilePath);
 
-    // Записываем таблицу в файл
-    writeHashTableToFile("data.txt", "table", table);
+    // Читаем JSON из файла
+    json config;
+    configFile >> config;
 
-    // Читаем таблицу из файла
-    HashTable readTable = readHashTableFromFile("data.txt", "table");
+    // Получаем название схемы и структуру таблиц
+    string schemaName = config["name"];
+    json structure = config["structure"];
 
-    // Выводим данные
-    Array authors = readTable.get("Author");
-    Array years = readTable.get("Year");
+    // Создаем директории и файлы
+    //createDirectoryAndFiles(schemaName, structure);
 
-    cout << "Authors: ";
-    authors.print();
+    // Ожидаем ввода команд из консоли
+    while (true) {
+        cout << "Enter command (or 'exit' to quit): ";
+        string command;
+        getline(cin, command);
 
-    cout << "Years: ";
-    years.print();
+        if (command == "exit") {
+            break;
+        }
+
+        if (command.substr(0, 12) == "INSERT INTO ") {
+            string tableName;
+            CustomVector<string> values;
+            parseInsertCommand(command, tableName, values);
+            insertIntoTable(schemaName, tableName, values);
+        } else if (command.substr(0, 12) == "DELETE FROM ") {
+            string tableName, columnName, value;
+            parseDeleteCommand(command, tableName, columnName, value);
+            deleteFromTable(schemaName, tableName, columnName, value);
+        } else if (command.substr(0, 7) == "SELECT ") {
+            string tableName1, tableName2, columnName1, columnName2;
+            parseSelectCommand(command, tableName1, tableName2, columnName1, columnName2);
+            selectFromTables(schemaName, tableName1, tableName2, columnName1, columnName2);
+        } else {
+            cout << "Unknown command" << endl;
+        }
+    }
 
     return 0;
 }
