@@ -8,174 +8,150 @@ namespace fs = std::filesystem;
 using json = nlohmann::json;
 
 template<typename T>
-struct CustomVector {
-    T* data;           // Указатель на элементы
-    size_t size;        // Текущий размер массива
-    size_t capacity;    // Вместимость массива
+struct SinglyLinkedList {
+    struct FLNode {
+        FLNode* next;
+        T value;
+        FLNode(const T& val) : value(val), next(nullptr) {}
+    };
 
-    // Увеличиваем вместимость массива, если необходимо
-    void resize(size_t new_capacity) {
-        T* new_data = new T[new_capacity];
-        for (size_t i = 0; i < size; ++i) {
-            new_data[i] = data[i];
+    FLNode* head;
+    SinglyLinkedList() : head(nullptr) {}
+
+    ~SinglyLinkedList() {
+        while (head) {
+            FLNode* temp = head;
+            head = head->next;
+            delete temp;
         }
-        delete[] data;
-        data = new_data;
-        capacity = new_capacity;
     }
 
-    // Конструктор по умолчанию
-    CustomVector() : data(nullptr), size(0), capacity(0) {}
-
-    // Конструктор с начальной вместимостью
-    CustomVector(size_t initial_capacity) : data(new T[initial_capacity]), size(0), capacity(initial_capacity) {}
-
-    // Деструктор
-    //~CustomVector() {
-    //    if (data != nullptr) {
-    //        delete[] data;
-    //        data = nullptr;
-    //    }
-    //}
-
-    // Добавление элемента в конец массива
-    void push_back(const T& value) {
-        if (size == capacity) {
-            resize(capacity == 0 ? 1 : capacity * 2);
-        }
-        data[size++] = value;
+    // Добавление элемента в голову
+    void addToHead(const T& value) {
+        FLNode* newNode = new FLNode(value);
+        newNode->next = head;
+        head = newNode;
     }
 
-    // Добавление элемента по индексу
-    void insert(size_t index, const T& value) {
-        if (index > size) {
-            throw out_of_range("Index out of range");
+    // Добавление элемента в хвост (сложность O(n))
+    void addToTail(const T& value) {
+        FLNode* newNode = new FLNode(value);
+        if (!head) {
+            head = newNode;
+        } else {
+            FLNode* temp = head;
+            while (temp->next) {
+                temp = temp->next;
+            }
+            temp->next = newNode;
         }
-        if (size == capacity) {
-            resize(capacity == 0 ? 1 : capacity * 2);
-        }
-        for (size_t i = size; i > index; --i) {
-            data[i] = data[i - 1];
-        }
-        data[index] = value;
-        ++size;
     }
 
-    // Получение элемента по индексу
-    T get(size_t index) const {
-        if (index >= size) {
-            throw out_of_range("Index out of range");
+    // Удаление элемента с головы
+    void removeFromHead() {
+        if (!head) {
+            throw runtime_error("List is empty");
         }
-        return data[index];
+        FLNode* temp = head;
+        head = head->next;
+        delete temp;
     }
 
-    // Удаление элемента по индексу
-    void remove(size_t index) {
-        if (index >= size) {
-            throw out_of_range("Index out of range");
+    // Удаление элемента с хвоста (сложность O(n))
+    void removeFromTail() {
+        if (!head) {
+            throw runtime_error("List is empty");
         }
-        for (size_t i = index; i < size - 1; ++i) {
-            data[i] = data[i + 1];
+        if (!head->next) {
+            delete head;
+            head = nullptr;
+        } else {
+            FLNode* temp = head;
+            while (temp->next->next) {
+                temp = temp->next;
+            }
+            delete temp->next;
+            temp->next = nullptr;
         }
-        --size;
     }
 
-    // Замена элемента по индексу
-    void set(size_t index, const T& value) {
-        if (index >= size) {
-            throw out_of_range("Index out of range");
+    // Удаление элемента по значению
+    void removeByValue(const T& value) {
+        FLNode* current = head;
+        FLNode* previous = nullptr;
+        while (current) {
+            if (current->value == value) {
+                if (previous) {
+                    previous->next = current->next;
+                } else {
+                    head = current->next;
+                }
+                delete current;
+                return;
+            }
+            previous = current;
+            current = current->next;
         }
-        data[index] = value;
+        throw runtime_error("Value not found");
     }
 
-    // Длина массива
-    size_t length() const {
-        return size;
+    // Поиск элемента по значению
+    bool search(const T& value) const {
+        FLNode* current = head;
+        while (current) {
+            if (current->value == value) {
+                return true;
+            }
+            current = current->next;
+        }
+        return false;
     }
 
-    // Чтение массива
+    // Чтение списка
     void print() const {
-        for (size_t i = 0; i < size; ++i) {
-            cout << data[i] << " ";
+        FLNode* current = head;
+        while (current) {
+            cout << current->value << " ";
+            current = current->next;
         }
         cout << endl;
     }
-    void begin(){
 
+    // Установка элемента по индексу
+    void set(int index, const T& value) {
+        FLNode* current = head;
+        for (int i = 0; i < index && current; ++i) {
+            current = current->next;
+        }
+        if (current) {
+            current->value = value;
+        }
+    }
+
+    // Получение размера списка
+    int size() const {
+        int count = 0;
+        FLNode* current = head;
+        while (current) {
+            ++count;
+            current = current->next;
+        }
+        return count;
     }
 };
 
 // Структура для хранения пары ключ-значение
 struct KeyValuePair {
     string key;
-    CustomVector<string> value;  // Используем CustomVector для хранения значений
+    SinglyLinkedList<string> value;  // Используем SinglyLinkedList для хранения значений
     KeyValuePair* next;
 
     KeyValuePair(const string& k) : key(k), next(nullptr) {}
 };
 
-// Динамический массив для хранения указателей на KeyValuePair
-struct DynamicArray {
-    KeyValuePair** array;
-    int size;
-    int capacity;
-
-    DynamicArray(int initialCapacity = 10) : size(0), capacity(initialCapacity) {
-        array = new KeyValuePair*[capacity];
-        for (int i = 0; i < capacity; ++i) {
-            array[i] = nullptr;
-        }
-    }
-
-    //~DynamicArray() {
-    //    delete[] array;
-    //}
-
-    void resize(int newCapacity) {
-        KeyValuePair** newArray = new KeyValuePair*[newCapacity];
-        for (int i = 0; i < size; ++i) {
-            newArray[i] = array[i];
-        }
-        for (int i = size; i < newCapacity; ++i) {
-            newArray[i] = nullptr;
-        }
-        delete[] array;
-        array = newArray;
-        capacity = newCapacity;
-    }
-
-    void add(KeyValuePair* element) {
-        if (size == capacity) {
-            resize(capacity * 2);
-        }
-        array[size++] = element;
-    }
-
-    KeyValuePair* get(int index) const {
-        if (index < 0 || index >= capacity) {
-            return nullptr;
-        }
-        return array[index];
-    }
-
-    void set(int index, KeyValuePair* element) {
-        if (index < 0 || index >= capacity) {
-            return;
-        }
-        array[index] = element;
-    }
-
-    int getSize() const {
-        return size;
-    }
-
-    int getCapacity() const {
-        return capacity;
-    }
-};
-
 struct HashTable {
-    DynamicArray table; // Динамический массив для хранения списков KeyValuePair
+    SinglyLinkedList<KeyValuePair*> table; // Односвязный список для хранения списков KeyValuePair
+    int tableSize; // Размер таблицы
 
     // Хеш-функция
     int hashFunction(const string& key) const {
@@ -183,61 +159,96 @@ struct HashTable {
         for (char c : key) {
             hash += c;
         }
-        return hash % table.getCapacity();
+        return hash % tableSize;
     }
 
-    HashTable() : table(10) {} // Инициализация с начальной емкостью 10
+    HashTable() : tableSize(0) {}
+
+    // Установка размера таблицы
+    void setTableSize(int size) {
+        tableSize = size;
+    }
 
     // Вставка пары ключ-значение в хеш-таблицу
     void insert(const string& key, const string& value) {
         int index = hashFunction(key);
-        KeyValuePair* current = table.get(index);
+        SinglyLinkedList<KeyValuePair*>::FLNode* current = table.head;
+        SinglyLinkedList<KeyValuePair*>::FLNode* prev = nullptr;
 
-        // Проверяем, существует ли уже элемент с таким ключом
-        while (current != nullptr) {
-            if (current->key == key) {
-                // Если ключ уже существует, добавляем значение в массив
-                current->value.push_back(value);
-                return;
-            }
+        // Найдем узел, соответствующий хеш-значению
+        for (int i = 0; i < index && current; ++i) {
+            prev = current;
             current = current->next;
         }
 
-        // Если ключ не найден, добавляем новый элемент
-        KeyValuePair* newPair = new KeyValuePair(key);
-        newPair->value.push_back(value);
-        if (table.get(index) == nullptr) {
-            // Если ячейка пуста, просто добавляем новую пару
-            table.set(index, newPair);
+        // Если узел с таким индексом не существует, создаем новый
+        if (current == nullptr) {
+            KeyValuePair* newPair = new KeyValuePair(key);
+            newPair->value.addToTail(value);
+            SinglyLinkedList<KeyValuePair*>::FLNode* newNode = new SinglyLinkedList<KeyValuePair*>::FLNode(newPair);
+
+            if (prev == nullptr) {
+                // Если это первый элемент в списке
+                table.head = newNode;
+            } else {
+                // Если это не первый элемент в списке
+                prev->next = newNode;
+            }
         } else {
-            // Если ячейка занята, добавляем новую пару в начало списка
-            newPair->next = table.get(index);
-            table.set(index, newPair);
+            // Проверяем, существует ли уже элемент с таким ключом
+            while (current != nullptr) {
+                if (current->value && current->value->key == key) {
+                    // Если ключ уже существует, добавляем значение в список
+                    current->value->value.addToTail(value);
+                    return;
+                }
+                prev = current;
+                current = current->next;
+            }
+
+            // Если ключ не найден, добавляем новый элемент
+            KeyValuePair* newPair = new KeyValuePair(key);
+            newPair->value.addToTail(value);
+            SinglyLinkedList<KeyValuePair*>::FLNode* newNode = new SinglyLinkedList<KeyValuePair*>::FLNode(newPair);
+
+            if (prev == nullptr) {
+                // Если это первый элемент в списке
+                table.head = newNode;
+            } else {
+                // Если это не первый элемент в списке
+                prev->next = newNode;
+            }
         }
     }
 
     // Получение значений по ключу
-    CustomVector<string> get(const string& key) const {
+    SinglyLinkedList<string> get(const string& key) const {
         int index = hashFunction(key);
-        KeyValuePair* current = table.get(index);
+        SinglyLinkedList<KeyValuePair*>::FLNode* current = table.head;
+        for (int i = 0; i < index && current; ++i) {
+            current = current->next;
+        }
 
         while (current != nullptr) {
-            if (current->key == key) {
-                return current->value;
+            if (current->value && current->value->key == key) {
+                return current->value->value;
             }
             current = current->next;
         }
 
-        return CustomVector<string>(); // Возвращаем пустой массив, если ключ не найден
+        return SinglyLinkedList<string>(); // Возвращаем пустой список, если ключ не найден
     }
 
     // Проверка наличия ключа
     bool contains(const string& key) const {
         int index = hashFunction(key);
-        KeyValuePair* current = table.get(index);
+        SinglyLinkedList<KeyValuePair*>::FLNode* current = table.head;
+        for (int i = 0; i < index && current; ++i) {
+            current = current->next;
+        }
 
         while (current != nullptr) {
-            if (current->key == key) {
+            if (current->value && current->value->key == key) {
                 return true;
             }
             current = current->next;
@@ -249,53 +260,66 @@ struct HashTable {
     // Удаление пары ключ-значение по ключу
     void remove(const string& key) {
         int index = hashFunction(key);
-        KeyValuePair* current = table.get(index);
-        KeyValuePair* prev = nullptr;
-
-        while (current != nullptr && current->key != key) {
+        SinglyLinkedList<KeyValuePair*>::FLNode* current = table.head;
+        SinglyLinkedList<KeyValuePair*>::FLNode* prev = nullptr;
+        for (int i = 0; i < index && current; ++i) {
             prev = current;
             current = current->next;
         }
 
-        if (current == nullptr) {
+        while (current != nullptr && (!current->value || current->value->key != key)) {
+            prev = current;
+            current = current->next;
+        }
+
+        if (current == nullptr || !current->value) {
             // Ключ не найден
             return;
         }
 
         if (prev == nullptr) {
             // Если удаляем первый элемент в списке
-            table.set(index, current->next);
+            table.head = current->next;
         } else {
             // Если удаляем не первый элемент в списке
             prev->next = current->next;
         }
 
+        delete current->value;
         delete current;
     }
 
     // Удаление строк, соответствующих условию
     void deleteRows(const string& columnName, const string& value) {
-        for (int i = 0; i < table.getCapacity(); ++i) {
-            KeyValuePair* current = table.get(i);
-            while (current != nullptr) {
-                if (current->key == columnName) {
-                    CustomVector<string>& values = current->value;
-                    for (size_t j = 0; j < values.length(); ++j) {
-                        if (values.get(j) == value) {
-                            // Удаляем строку, соответствующую условию
-                            for (int k = 0; k < table.getCapacity(); ++k) {
-                                KeyValuePair* col = table.get(k);
-                                while (col != nullptr) {
-                                    col->value.remove(j);
-                                    col = col->next;
-                                }
-                            }
-                            --j; // Уменьшаем индекс, так как размер массива уменьшился
+        SinglyLinkedList<KeyValuePair*>::FLNode* current = table.head;
+        SinglyLinkedList<KeyValuePair*>::FLNode* prev = nullptr;
+    
+        while (current != nullptr) {
+            if (current->value && current->value->key == columnName) {
+                SinglyLinkedList<string>& values = current->value->value;
+                SinglyLinkedList<string>::FLNode* node = values.head;
+                SinglyLinkedList<string>::FLNode* prevNode = nullptr;
+    
+                while (node != nullptr) {
+                    if (node->value == value) {
+                        // Удаляем строку, соответствующую условию
+                        if (prevNode == nullptr) {
+                            values.head = node->next;
+                        } else {
+                            prevNode->next = node->next;
                         }
+                        SinglyLinkedList<string>::FLNode* temp = node;
+                        node = node->next;
+                        delete temp;
+                    } else {
+                        prevNode = node;
+                        node = node->next;
                     }
                 }
-                current = current->next;
             }
+    
+            prev = current;
+            current = current->next;
         }
     }
 
@@ -308,30 +332,42 @@ struct HashTable {
             return resultTable;
         }
 
-        CustomVector<string> values1 = get(column1);
-        CustomVector<string> values2 = otherTable.get(column2);
+        SinglyLinkedList<string> values1 = get(column1);
+        SinglyLinkedList<string> values2 = otherTable.get(column2);
 
-        for (size_t i = 0; i < values1.length(); ++i) {
-            for (size_t j = 0; j < values2.length(); ++j) {
-                resultTable.insert(column1, values1.get(i));
-                resultTable.insert(column2, values2.get(j));
+        SinglyLinkedList<string>::FLNode* node1 = values1.head;
+        while (node1 != nullptr) {
+            SinglyLinkedList<string>::FLNode* node2 = values2.head;
+            while (node2 != nullptr) {
+                resultTable.insert(column1, node1->value);
+                resultTable.insert(column2, node2->value);
+                node2 = node2->next;
             }
+            node1 = node1->next;
         }
 
         return resultTable;
     }
 
-    // Деструктор для очистки памяти
-    //~HashTable() {
-      //  for (int i = 0; i < table.getCapacity(); ++i) {
-        //    KeyValuePair* current = table.get(i);
-          //  while (current != nullptr) {
-            //    KeyValuePair* next = current->next;
-              //  delete current;
-                //current = next;
-            //}
-        //}
-    //}
+    void printHashTable() const {
+        SinglyLinkedList<KeyValuePair*>::FLNode* current = table.head;
+        while (current) {
+            if (current->value) {
+                cout << current->value->key << ": ";
+                SinglyLinkedList<string>::FLNode* valueNode = current->value->value.head;
+                while (valueNode) {
+                    cout << valueNode->value;
+                    if (valueNode->next) {
+                        cout << ", ";
+                    }
+                    valueNode = valueNode->next;
+                }
+                cout << endl;
+            }
+            current = current->next;
+        }
+        cout << "-----------------------------" << endl;
+    }
 };
 
 // Функция для чтения хеш-таблицы из файла в формате .csv
@@ -339,75 +375,81 @@ HashTable readHashTableFromCSVFile(const string& filename) {
     ifstream file(filename);
     string line;
     HashTable hashTable;
-    CustomVector<string> headers;
+    SinglyLinkedList<string> headers;
 
     // Читаем заголовки
     if (getline(file, line)) {
         stringstream ss(line);
         string header;
         while (getline(ss, header, ',')) {
-            headers.push_back(header);
+            headers.addToTail(header);
         }
     }
 
+    // Устанавливаем размер таблицы
+    hashTable.setTableSize(1);// Здесь должно было быть headers.size()); но оно так не работает, поэтому
+                              // использую костыль. С единицей читается таблица как надо
+                              // Если использую размер, то появляются дубликаты колонок и они забирают себе элементы.
     // Читаем данные
     while (getline(file, line)) {
         stringstream ss(line);
-        string value;
-        int columnIndex = 0;
-        while (getline(ss, value, ',')) {
-            if (columnIndex < headers.length()) {
-                hashTable.insert(headers.get(columnIndex), value);
+        string value; // Значение из файла
+        SinglyLinkedList<string>::FLNode* headerNode = headers.head;
+        int index = 0;
+        while (getline(ss, value, ',')) { // Разделение по запятым
+            if (headerNode != nullptr) {
+                // Добавляем значение в хеш-таблицу, используя текущий заголовок
+                hashTable.insert(headerNode->value, value);
+                headerNode = headerNode->next;
             }
-            columnIndex++;
+            index++;
         }
     }
 
     file.close();
     return hashTable;
 }
-
 // Функция для записи хеш-таблицы в файл в формате .csv
 void writeHashTableToCSVFile(const string& filename, const HashTable& hashTable) {
     ofstream file(filename);
-    CustomVector<string> headers;
-    CustomVector<CustomVector<string>> columns;
+    SinglyLinkedList<string> headers;
+    SinglyLinkedList<SinglyLinkedList<string>> columns;
 
     // Собираем заголовки и столбцы
-    for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
-        KeyValuePair* current = hashTable.table.get(i);
-        while (current) {
-            headers.push_back(current->key);
-            columns.push_back(current->value);
-            current = current->next;
-        }
+    SinglyLinkedList<KeyValuePair*>::FLNode* current = hashTable.table.head;
+    while (current) {
+        headers.addToTail(current->value->key);
+        columns.addToTail(current->value->value);
+        current = current->next;
     }
 
     // Записываем заголовки
-    for (size_t i = 0; i < headers.length(); ++i) {
-        file << headers.get(i);
-        if (i < headers.length() - 1) {
+    SinglyLinkedList<string>::FLNode* headerNode = headers.head;
+    while (headerNode) {
+        file << headerNode->value;
+        if (headerNode->next) {
             file << ",";
         }
+        headerNode = headerNode->next;
     }
     file << endl;
 
     // Записываем данные
-    size_t maxRows = 0;
-    for (size_t i = 0; i < columns.length(); ++i) {
-        if (columns.get(i).length() > maxRows) {
-            maxRows = columns.get(i).length();
-        }
-    }
-
-    for (size_t row = 0; row < maxRows; ++row) {
-        for (size_t col = 0; col < columns.length(); ++col) {
-            if (row < columns.get(col).length()) {
-                file << columns.get(col).get(row);
+    int rowCount = columns.head->value.size();
+    for (int i = 0; i < rowCount; ++i) {
+        SinglyLinkedList<SinglyLinkedList<string>>::FLNode* columnNode = columns.head;
+        while (columnNode) {
+            SinglyLinkedList<string>::FLNode* valueNode = columnNode->value.head;
+            for (int j = 0; j < i && valueNode; ++j) {
+                valueNode = valueNode->next;
             }
-            if (col < columns.length() - 1) {
+            if (valueNode) {
+                file << valueNode->value;
+            }
+            if (columnNode->next) {
                 file << ",";
             }
+            columnNode = columnNode->next;
         }
         file << endl;
     }
@@ -423,11 +465,11 @@ void createDirectoryAndFiles(const string& schemaName, const json& structure) {
     // Проходим по всем таблицам в структуре
     for (const auto& table : structure) {
         string tableName = table["name"];
-        CustomVector<string> columns;
+        SinglyLinkedList<string> columns;
 
-        // Заполняем CustomVector названиями колонок
+        // Заполняем SinglyLinkedList названиями колонок
         for (const auto& column : table["columns"]) {
-            columns.push_back(column);
+            columns.addToTail(column);
         }
 
         // Создаем поддиректорию для таблицы
@@ -439,11 +481,13 @@ void createDirectoryAndFiles(const string& schemaName, const json& structure) {
         ofstream file(filePath);
         if (file.is_open()) {
             // Записываем названия колонок в файл
-            for (size_t i = 0; i < columns.length(); ++i) {
-                file << columns.get(i);
-                if (i < columns.length() - 1) {
+            SinglyLinkedList<string>::FLNode* columnNode = columns.head;
+            while (columnNode) {
+                file << columnNode->value;
+                if (columnNode->next) {
                     file << ",";
                 }
+                columnNode = columnNode->next;
             }
             file << endl; // Добавляем перевод строки в конце
             file.close();
@@ -455,7 +499,7 @@ void createDirectoryAndFiles(const string& schemaName, const json& structure) {
 }
 
 // Функция для парсинга команды INSERT INTO
-void parseInsertCommand(const string& command, string& tableName, CustomVector<string>& values) {
+void parseInsertCommand(const string& command, string& tableName, SinglyLinkedList<string>& values) {
     int i = 0;
 
     // Пропускаем "INSERT INTO "
@@ -496,7 +540,7 @@ void parseInsertCommand(const string& command, string& tableName, CustomVector<s
         } else {
             // Если мы вне кавычек и встречаем запятую или закрывающую скобку, добавляем значение в values
             if (command[i] == ',' || command[i] == ')') {
-                values.push_back(substr);
+                values.addToTail(substr);
                 substr.clear(); // Очищаем substr для следующего значения
             }
         }
@@ -505,20 +549,22 @@ void parseInsertCommand(const string& command, string& tableName, CustomVector<s
 
     // Добавляем последнее значение, если оно есть
     if (!substr.empty()) {
-        values.push_back(substr);
+        values.addToTail(substr);
     }
 }
 
 // Функция для вставки данных в таблицу
-void insertIntoTable(const string& schemaName, const string& tableName, const CustomVector<string>& values) {
+void insertIntoTable(const string& schemaName, const string& tableName, const SinglyLinkedList<string>& values) {
     fs::path filePath = fs::path(schemaName) / tableName / "1.csv";
     ofstream file(filePath, ios::app); // Открываем файл в режиме добавления
     if (file.is_open()) {
-        for (size_t i = 0; i < values.length(); ++i) {
-            file << values.get(i);
-            if (i < values.length() - 1) {
+        SinglyLinkedList<string>::FLNode* valueNode = values.head;
+        while (valueNode) {
+            file << valueNode->value;
+            if (valueNode->next) {
                 file << ",";
             }
+            valueNode = valueNode->next;
         }
         file << endl; // Добавляем перевод строки в конце
         file.close();
@@ -570,13 +616,14 @@ void parseDeleteCommand(const string& command, string& tableName, string& column
 void deleteFromTable(const string& schemaName, const string& tableName, const string& columnName, const string& value) {
     fs::path filePath = fs::path(schemaName) / tableName / "1.csv";
     HashTable hashTable = readHashTableFromCSVFile(filePath.string());
+    hashTable.printHashTable();
     hashTable.deleteRows(columnName, value);
     writeHashTableToCSVFile(filePath.string(), hashTable);
     cout << "Deleted from table: " << tableName << endl;
 }
 
 // Функция для парсинга команды SELECT FROM
-void parseSelectCommand(const string& command, CustomVector<string>& columns, CustomVector<string>& tables) {
+void parseSelectCommand(const string& command, SinglyLinkedList<string>& columns, SinglyLinkedList<string>& tables) {
     int i = 0;
     string column;
     string table;
@@ -584,25 +631,21 @@ void parseSelectCommand(const string& command, CustomVector<string>& columns, Cu
     // Пропускаем "SELECT "
     while (command[i] != '\0' && command[i] != ' ') i++;
     i++;
-    
-    bool isDot = false;
+
     // Получаем колонки
-    while (command[i] != '\0') {
+    while (command[i] != '\0' && command[i] != ' ') {
         if (command[i] == ',') {
-            columns.push_back(column);
+            columns.addToTail(column);
             column.clear();
-            isDot = false;
-        } else if (command[i] == ' ') {
-            columns.push_back(column);
-            break;
-        } else if (isDot == true){
-            column += command[i];
         } else if (command[i] == '.') {
-            isDot = true;
+            table = column;
+            column.clear();
+        } else {
+            column += command[i];
         }
         i++;
     }
-    i++;
+    columns.addToTail(column);
 
     // Пропускаем "FROM "
     while (command[i] != '\0' && command[i] != ' ') i++;
@@ -611,46 +654,53 @@ void parseSelectCommand(const string& command, CustomVector<string>& columns, Cu
     // Получаем таблицы
     while (command[i] != '\0') {
         if (command[i] == ',') {
-            tables.push_back(table);
+            tables.addToTail(table);
             table.clear();
         } else {
             table += command[i];
         }
         i++;
     }
-    tables.push_back(table);
+    tables.addToTail(table);
 }
 
 // Функция для выполнения команды SELECT FROM
-void selectFromTables(const string& schemaName, const CustomVector<string>& columns, const CustomVector<string>& tables) {
-    CustomVector<HashTable> hashTables;
-    CustomVector<string> headers;
+void selectFromTables(const string& schemaName, const SinglyLinkedList<string>& columns, const SinglyLinkedList<string>& tables) {
+    SinglyLinkedList<HashTable> hashTables;
+    SinglyLinkedList<string> headers;
 
     // Загружаем таблицы
-    for (size_t i = 0; i < tables.length(); ++i) {
-        fs::path filePath = fs::path(schemaName) / tables.get(i) / "1.csv";
-        hashTables.push_back(readHashTableFromCSVFile(filePath.string()));
+    SinglyLinkedList<string>::FLNode* tableNode = tables.head;
+    while (tableNode) {
+        fs::path filePath = fs::path(schemaName) / tableNode->value / "1.csv";
+        hashTables.addToTail(readHashTableFromCSVFile(filePath.string()));
+        tableNode = tableNode->next;
     }
 
     // Создаем заголовки
-    for (size_t i = 0; i < columns.length(); ++i) {
-        headers.push_back(columns.get(i));
+    SinglyLinkedList<string>::FLNode* columnNode = columns.head;
+    while (columnNode) {
+        headers.addToTail(columnNode->value);
+        columnNode = columnNode->next;
     }
 
     // Выводим заголовки
-    for (size_t i = 0; i < headers.length(); ++i) {
-        cout << headers.get(i);
-        if (i < headers.length() - 1) {
+    SinglyLinkedList<string>::FLNode* headerNode = headers.head;
+    while (headerNode) {
+        cout << headerNode->value;
+        if (headerNode->next) {
             cout << ",";
         }
+        headerNode = headerNode->next;
     }
     cout << endl;
 
     // Сопоставляем колонки с таблицами
-    CustomVector<string> tableNames;
-    CustomVector<string> columnNames;
-    for (size_t i = 0; i < columns.length(); ++i) {
-        string column = columns.get(i);
+    SinglyLinkedList<string> tableNames;
+    SinglyLinkedList<string> columnNames;
+    columnNode = columns.head;
+    while (columnNode) {
+        string column = columnNode->value;
         size_t dotPos = -1;
         for (size_t j = 0; j < column.length(); ++j) {
             if (column[j] == '.') {
@@ -661,48 +711,38 @@ void selectFromTables(const string& schemaName, const CustomVector<string>& colu
         if (dotPos != -1) {
             string tableName = column.substr(0, dotPos);
             string columnName = column.substr(dotPos + 1);
-            tableNames.push_back(tableName);
-            columnNames.push_back(columnName);
+            tableNames.addToTail(tableName);
+            columnNames.addToTail(columnName);
         } else {
             // Если имя колонки не содержит точки, считаем, что это колонка из первой таблицы
-            tableNames.push_back(tables.get(0));
-            columnNames.push_back(column);
+            tableNames.addToTail(tables.head->value);
+            columnNames.addToTail(column);
         }
+        columnNode = columnNode->next;
     }
 
     // Выводим данные с cross join
-    size_t maxRows = 0;
-    for (size_t i = 0; i < tableNames.length(); ++i) {
-        string tableName = tableNames.get(i);
-        string columnName = columnNames.get(i);
-        for (size_t j = 0; j < hashTables.length(); ++j) {
-            if (tables.get(j) == tableName) {
-                CustomVector<string> values = hashTables.get(j).get(columnName);
-                if (values.length() > maxRows) {
-                    maxRows = values.length();
-                }
-            }
-        }
-    }
-
-    for (size_t row = 0; row < maxRows; ++row) {
-        for (size_t i = 0; i < tableNames.length(); ++i) {
-            string tableName = tableNames.get(i);
-            string columnName = columnNames.get(i);
-            for (size_t j = 0; j < hashTables.length(); ++j) {
-                if (tables.get(j) == tableName) {
-                    CustomVector<string> values = hashTables.get(j).get(columnName);
-                    if (row < values.length()) {
-                        cout << values.get(row);
-                    } else {
-                        cout << ""; // Если строки не хватает, выводим пустую строку
-                    }
-                    if (i < tableNames.length() - 1) {
+    SinglyLinkedList<string>::FLNode* tableNamesNode = tableNames.head;
+    while (tableNamesNode) {
+        string tableName = tableNamesNode->value;
+        string columnName = columnNames.head->value;
+        SinglyLinkedList<HashTable>::FLNode* hashTableNode = hashTables.head;
+        while (hashTableNode) {
+            if (hashTableNode->value.contains(columnName)) {
+                SinglyLinkedList<string> values = hashTableNode->value.get(columnName);
+                SinglyLinkedList<string>::FLNode* valueNode = values.head;
+                while (valueNode) {
+                    cout << valueNode->value;
+                    if (valueNode->next) {
                         cout << ",";
                     }
+                    valueNode = valueNode->next;
                 }
             }
+            hashTableNode = hashTableNode->next;
         }
+        tableNamesNode = tableNamesNode->next;
+        columnNames.head = columnNames.head->next;
         cout << endl;
     }
 }
@@ -737,7 +777,7 @@ int main() {
 
         if (command.substr(0, 12) == "INSERT INTO ") {
             string tableName;
-            CustomVector<string> values;
+            SinglyLinkedList<string> values;
             parseInsertCommand(command, tableName, values);
             insertIntoTable(schemaName, tableName, values);
         } else if (command.substr(0, 12) == "DELETE FROM ") {
@@ -745,14 +785,29 @@ int main() {
             parseDeleteCommand(command, tableName, columnName, value);
             deleteFromTable(schemaName, tableName, columnName, value);
         } else if (command.substr(0, 7) == "SELECT ") {
-            CustomVector<string> columns;
-            CustomVector<string> tables;
+            SinglyLinkedList<string> columns;
+            SinglyLinkedList<string> tables;
             parseSelectCommand(command, columns, tables);
             selectFromTables(schemaName, columns, tables);
         } else {
             cout << "Unknown command" << endl;
         }
     }
+    // Создаем экземпляр HashTable
+    //HashTable hashTable;
 
+    // Устанавливаем размер таблицы
+    //hashTable.setTableSize(5); // Например, размер таблицы 10
+    //hashTable.insert("id", "1");
+    //hashTable.insert("name", "Alice");
+    //hashTable.insert("city", "Detroit");
+    //hashTable.insert("age", "25");
+    //hashTable.insert("country", "Russia");
+    //hashTable.insert("id", "2");
+    //hashTable.insert("name", "Bob");
+    //hashTable.insert("city", "New York");
+    //hashTable.insert("age", "30");
+    //hashTable.insert("country", "LA");
+    //hashTable.printHashTable();
     return 0;
 }
