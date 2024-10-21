@@ -1,24 +1,24 @@
 #include <iostream>
 //#include "LinkedLists.h"
 using namespace std;
-
+template<typename T>
 struct Queue {
-    SinglyLinkedList list;
+    DoublyLinkedList<T> list;
 
     // Добавление элемента в конец очереди
-    void push(const string& item) {
+    void push(const T& item) {
         list.addToTail(item);
     }
 
     // Удаление элемента из начала очереди
-    string pop() {
-        string value = list.head->value;
+    T pop() {
+        T value = list.head->value;
         list.removeFromHead();
         return value;
     }
 
     // Чтение элемента из начала очереди
-    string peek() const {
+    T peek() const {
         return list.head->value;
     }
 
@@ -27,11 +27,12 @@ struct Queue {
         return list.head == nullptr;
     }
 };
+
 // Функция для чтения очереди из файла
-Queue readQueueFromFile(const string& filename, const string& queueName) {
+Queue<string> readQueueFromFile(const string& filename, const string& queueName) {
     ifstream file(filename);
     string line;
-    Queue queue;
+    Queue<string> queue;
 
     while (getline(file, line)) {
         if (line.find(queueName + "=") == 0) {
@@ -50,7 +51,7 @@ Queue readQueueFromFile(const string& filename, const string& queueName) {
 }
 
 // Функция для записи очереди в файл
-void writeQueueToFile(const string& filename, const string& queueName, const Queue& queue) {
+void writeQueueToFile(const string& filename, const string& queueName, const Queue<string>& queue) {
     ifstream file(filename);
     stringstream buffer;
     string line;
@@ -59,7 +60,7 @@ void writeQueueToFile(const string& filename, const string& queueName, const Que
     while (getline(file, line)) {
         if (line.find(queueName + "=") == 0) {
             buffer << queueName << "=";
-            SinglyLinkedList::FLNode* current = queue.list.head;
+            DoublyLinkedList<string>::DLNode* current = queue.list.head;
             while (current) {
                 buffer << current->value;
                 if (current->next) {
@@ -76,7 +77,7 @@ void writeQueueToFile(const string& filename, const string& queueName, const Que
 
     if (!found) {
         buffer << queueName << "=";
-        SinglyLinkedList::FLNode* current = queue.list.head;
+        DoublyLinkedList<string>::DLNode* current = queue.list.head;
         while (current) {
             buffer << current->value;
             if (current->next) {

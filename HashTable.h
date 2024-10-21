@@ -204,13 +204,15 @@ void writeHashTableToFile(const string& filename, const string& hashTableName, c
     while (getline(file, line)) {
         if (line.find(hashTableName + "=") == 0) {
             buffer << hashTableName << "=";
+            bool firstElement = true;
             for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
                 KeyValuePair* current = hashTable.table.get(i);
                 while (current) {
-                    buffer << current->key << ":" << current->value;
-                    if (current->next) {
+                    if (!firstElement) {
                         buffer << ",";
                     }
+                    buffer << current->key << ":" << current->value;
+                    firstElement = false;
                     current = current->next;
                 }
             }
@@ -223,13 +225,15 @@ void writeHashTableToFile(const string& filename, const string& hashTableName, c
 
     if (!found) {
         buffer << hashTableName << "=";
+        bool firstElement = true;
         for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
             KeyValuePair* current = hashTable.table.get(i);
             while (current) {
-                buffer << current->key << ":" << current->value;
-                if (current->next) {
+                if (!firstElement) {
                     buffer << ",";
                 }
+                buffer << current->key << ":" << current->value;
+                firstElement = false;
                 current = current->next;
             }
         }

@@ -1,11 +1,13 @@
 #include <iostream>
 
 using namespace std;
+
+template<typename T>
 struct SinglyLinkedList {
     struct FLNode {
         FLNode* next;
-        string value;
-        FLNode(const string& val) : value(val), next(nullptr) {}
+        T value;
+        FLNode(const T& val) : value(val), next(nullptr) {}
     };
     FLNode* head;
     SinglyLinkedList() : head(nullptr) {}
@@ -19,14 +21,14 @@ struct SinglyLinkedList {
     }
 
     // Добавление элемента в голову
-    void addToHead(const string& value) {
+    void addToHead(const T& value) {
         FLNode* newNode = new FLNode(value);
-        newNode->next = head;
+        newNode->next = head; // Если список пуст, то новый узел и голова, и хвост
         head = newNode;
     }
 
     // Добавление элемента в хвост (сложность O(n))
-    void addToTail(const string& value) {
+    void addToTail(const T& value) {
         FLNode* newNode = new FLNode(value);
         if (!head) {
             head = newNode;
@@ -68,7 +70,7 @@ struct SinglyLinkedList {
     }
 
     // Удаление элемента по значению
-    void removeByValue(const string& value) {
+    void removeByValue(const T& value) {
         FLNode* current = head;
         FLNode* previous = nullptr;
         while (current) {
@@ -88,7 +90,7 @@ struct SinglyLinkedList {
     }
 
     // Поиск элемента по значению
-    bool search(const string& value) const {
+    bool search(const T& value) const {
         FLNode* current = head;
         while (current) {
             if (current->value == value) {
@@ -110,12 +112,13 @@ struct SinglyLinkedList {
     }
 };
 
+template<typename T>
 struct DoublyLinkedList {
     struct DLNode {
-        string value;
+        T value;
         DLNode* prev;
         DLNode* next;
-        DLNode(const string& val) : value(val), prev(nullptr), next(nullptr) {}
+        DLNode(const T& val) : value(val), prev(nullptr), next(nullptr) {}
     };
 
     DLNode* head;
@@ -132,19 +135,19 @@ struct DoublyLinkedList {
     }
 
     // Добавление элемента в голову
-    void addToHead(const string& value) {
+    void addToHead(const T& value) {
         DLNode* newNode = new DLNode(value);
         if (!head) {
-            head = tail = newNode;
+            head = tail = newNode; // Если список пуст, то новый узел и голова, и хвост
         } else {
-            newNode->next = head;
-            head->prev = newNode;
-            head = newNode;
+            newNode->next = head; // Новый узел указывает next на предыдущую голову
+            head->prev = newNode; // Указатель prev предыдущей головы теперь указывает на новый узел
+            head = newNode; // Головой становится новый узел
         }
     }
 
     // Добавление элемента в хвост
-    void addToTail(const string& value) {
+    void addToTail(const T& value) {
         DLNode* newNode = new DLNode(value);
         if (!tail) {
             head = tail = newNode;
@@ -186,7 +189,7 @@ struct DoublyLinkedList {
     }
 
     // Удаление элемента по значению
-    void removeByValue(const string& value) {
+    void removeByValue(const T& value) {
         DLNode* current = head;
         while (current) {
             if (current->value == value) {
@@ -209,7 +212,7 @@ struct DoublyLinkedList {
     }
 
     // Поиск элемента по значению
-    bool search(const string& value) const {
+    bool search(const T& value) const {
         DLNode* current = head;
         while (current) {
             if (current->value == value) {
@@ -231,10 +234,10 @@ struct DoublyLinkedList {
     }
 };
 // Функция для чтения односвязного списка из файла
-SinglyLinkedList readSinglyLinkedListFromFile(const string& filename, const string& listName) {
+SinglyLinkedList<string> readSinglyLinkedListFromFile(const string& filename, const string& listName) {
     ifstream file(filename);
     string line;
-    SinglyLinkedList list;
+    SinglyLinkedList<string> list;
 
     while (getline(file, line)) {
         if (line.find(listName + "=") == 0) {
@@ -253,7 +256,7 @@ SinglyLinkedList readSinglyLinkedListFromFile(const string& filename, const stri
 }
 
 // Функция для записи односвязного списка в файл
-void writeSinglyLinkedListToFile(const string& filename, const string& listName, const SinglyLinkedList& list) {
+void writeSinglyLinkedListToFile(const string& filename, const string& listName, const SinglyLinkedList<string>& list) {
     ifstream file(filename);
     stringstream buffer;
     string line;
@@ -262,7 +265,7 @@ void writeSinglyLinkedListToFile(const string& filename, const string& listName,
     while (getline(file, line)) {
         if (line.find(listName + "=") == 0) {
             buffer << listName << "=";
-            SinglyLinkedList::FLNode* current = list.head;
+            SinglyLinkedList<string>::FLNode* current = list.head;
             while (current) {
                 buffer << current->value;
                 if (current->next) {
@@ -279,7 +282,73 @@ void writeSinglyLinkedListToFile(const string& filename, const string& listName,
 
     if (!found) {
         buffer << listName << "=";
-        SinglyLinkedList::FLNode* current = list.head;
+        SinglyLinkedList<string>::FLNode* current = list.head;
+        while (current) {
+            buffer << current->value;
+            if (current->next) {
+                buffer << ",";
+            }
+            current = current->next;
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}
+// Функция для чтения двусвязного списка из файла
+DoublyLinkedList<string> readDoublyLinkedListFromFile(const string& filename, const string& listName) {
+    ifstream file(filename);
+    string line;
+    DoublyLinkedList<string> list;
+
+    while (getline(file, line)) {
+        if (line.find(listName + "=") == 0) {
+            string data = line.substr(listName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                list.addToTail(item);
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return list;
+}
+
+// Функция для записи двусвязного списка в файл
+void writeDoublyLinkedListToFile(const string& filename, const string& listName, const DoublyLinkedList<string>& list) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(listName + "=") == 0) {
+            buffer << listName << "=";
+            DoublyLinkedList<string>::DLNode* current = list.head;
+            while (current) {
+                buffer << current->value;
+                if (current->next) {
+                    buffer << ",";
+                }
+                current = current->next;
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << listName << "=";
+        DoublyLinkedList<string>::DLNode* current = list.head;
         while (current) {
             buffer << current->value;
             if (current->next) {

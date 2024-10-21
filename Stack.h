@@ -3,7 +3,7 @@
 using namespace std;
 
 struct Stack {
-    SinglyLinkedList list;
+    SinglyLinkedList<string> list;
 
     // Добавление элемента в стек
     void push(const string& item) {
@@ -59,7 +59,7 @@ void writeStackToFile(const string& filename, const string& stackName, const Sta
         if (line.find(stackName + "=") == 0) {
             buffer << stackName << "=";
             Stack tempStack;
-            SinglyLinkedList::FLNode* current = stack.list.head;
+            SinglyLinkedList<string>::FLNode* current = stack.list.head;
             while (current) {
                 tempStack.push(current->value);
                 current = current->next;
@@ -80,7 +80,7 @@ void writeStackToFile(const string& filename, const string& stackName, const Sta
     if (!found) {
         buffer << stackName << "=";
         Stack tempStack;
-        SinglyLinkedList::FLNode* current = stack.list.head;
+        SinglyLinkedList<string>::FLNode* current = stack.list.head;
         while (current) {
             tempStack.push(current->value);
             current = current->next;

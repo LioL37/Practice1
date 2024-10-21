@@ -156,7 +156,70 @@ int main() {
 
             SinglyLinkedList list = readSinglyLinkedListFromFile(filename, listName);
             list.print();
-        } else if (command == "QPUSH") {
+        } else if (command == "DLADDH") {
+            string listName, value;
+            cin >> listName >> value;
+
+            DoublyLinkedList<string> list = readDoublyLinkedListFromFile(filename, listName);
+            list.addToHead(value);
+            writeDoublyLinkedListToFile(filename, listName, list);
+        } else if (command == "DLADDT") {
+            string listName, value;
+            cin >> listName >> value;
+
+            DoublyLinkedList<string> list = readDoublyLinkedListFromFile(filename, listName);
+            list.addToTail(value);
+            writeDoublyLinkedListToFile(filename, listName, list);
+        } else if (command == "DLREMH") {
+            string listName;
+            cin >> listName;
+
+            DoublyLinkedList<string> list = readDoublyLinkedListFromFile(filename, listName);
+            try {
+                list.removeFromHead();
+                writeDoublyLinkedListToFile(filename, listName, list);
+            } catch (const runtime_error& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "DLREMT") {
+            string listName;
+            cin >> listName;
+
+            DoublyLinkedList<string> list = readDoublyLinkedListFromFile(filename, listName);
+            try {
+                list.removeFromTail();
+                writeDoublyLinkedListToFile(filename, listName, list);
+            } catch (const runtime_error& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "DLREMV") {
+            string listName, value;
+            cin >> listName >> value;
+
+            DoublyLinkedList<string> list = readDoublyLinkedListFromFile(filename, listName);
+            try {
+                list.removeByValue(value);
+                writeDoublyLinkedListToFile(filename, listName, list);
+            } catch (const runtime_error& e) {
+                cout << e.what() << endl;
+            }
+        } else if (command == "DLSEARCH") {
+            string listName, value;
+            cin >> listName >> value;
+
+            DoublyLinkedList<string> list = readDoublyLinkedListFromFile(filename, listName);
+            if (list.search(value)) {
+                cout << "Value found." << endl;
+            } else {
+                cout << "Value not found." << endl;
+            }
+        } else if (command == "DLPRINT") {
+            string listName;
+            cin >> listName;
+
+            DoublyLinkedList<string> list = readDoublyLinkedListFromFile(filename, listName);
+            list.print();
+        }  else if (command == "QPUSH") {
             string queueName, value;
             cin >> queueName >> value;
 
@@ -296,18 +359,6 @@ int main() {
             } catch (const out_of_range& e) {
                 cout << e.what() << endl;
             }
-        } else if (command == "TGET") {
-            string treeName;
-            int index;
-            cin >> treeName >> index;
-
-            CompleteBinaryTree tree = readTreeFromFile(filename, treeName);
-            try {
-                int value = tree.get(index);
-                cout << "Value at index " << index << ": " << value << endl;
-            } catch (const out_of_range& e) {
-                cout << e.what() << endl;
-            }
         } else if (command == "TPRINT") {
             string treeName;
             cin >> treeName;
@@ -320,6 +371,5 @@ int main() {
             cout << "Unknown command." << endl;
         }
     }
-
     return 0;
 }
