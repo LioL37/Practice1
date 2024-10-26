@@ -18,13 +18,13 @@ struct SinglyLinkedList {
     FLNode* head;
     SinglyLinkedList() : head(nullptr) {}
 
-    ~SinglyLinkedList() {
-        while (head) {
-            FLNode* temp = head;
-            head = head->next;
-            delete temp;
-        }
-    }
+    //~SinglyLinkedList() {
+    //    while (head) {
+    //        FLNode* temp = head;
+    //        head = head->next;
+    //        delete temp;
+    //    }
+    //}
 
     // Добавление элемента в голову
     void addToHead(const T& value) {
@@ -322,97 +322,7 @@ struct HashTable {
             current = current->next;
         }
     }
-
-    // Выполнение cross join и создание новой таблицы
-    //HashTable crossJoin(const HashTable& otherTable, const string& column1, const string& column2) const {
-    //    HashTable resultTable;
-    //    resultTable.setTableSize(1); // Костыль
-//
-    //    if (!contains(column1) || !otherTable.contains(column2)) {
-    //        cerr << "Column not found in one of the tables." << endl;
-    //        return resultTable;
-    //    }
-//
-    //    SinglyLinkedList<string> values1 = get(column1);
-    //    SinglyLinkedList<string> values2 = otherTable.get(column2);
-//
-    //    SinglyLinkedList<string>::FLNode* node1 = values1.head;
-    //    while (node1 != nullptr) {
-    //        SinglyLinkedList<string>::FLNode* node2 = values2.head;
-    //        while (node2 != nullptr) {
-    //            resultTable.insert(column1, node1->value);
-    //            resultTable.insert(column2, node2->value);
-    //            node2 = node2->next;
-    //        }
-    //        node1 = node1->next;
-    //    }
-//
-    //    return resultTable;
-    //}
-    // Функция для выполнения cross join двух таблиц
-    // Функция для выполнения cross join двух таблиц
-    // Функция для выполнения cross join двух таблиц
-    HashTable crossJoin(const HashTable& otherTable) const {
-        HashTable resultTable;
-        resultTable.setTableSize(1);
     
-        // Считываем строки из текущей таблицы
-        SinglyLinkedList<SinglyLinkedList<string>> rows1;
-        SinglyLinkedList<KeyValuePair*>::FLNode* current = table.head;
-        while (current) {
-            if (current->value) {
-                SinglyLinkedList<string>::FLNode* valueNode = current->value->value.head;
-                while (valueNode) {
-                    SinglyLinkedList<string> row;
-                    row.addToTail(valueNode->value);
-                    rows1.addToTail(row);
-                    valueNode = valueNode->next;
-                }
-            }
-            current = current->next;
-        }
-    
-        // Считываем строки из другой таблицы
-        SinglyLinkedList<SinglyLinkedList<string>> rows2;
-        current = otherTable.table.head;
-        while (current) {
-            if (current->value) {
-                SinglyLinkedList<string>::FLNode* valueNode = current->value->value.head;
-                while (valueNode) {
-                    SinglyLinkedList<string> row;
-                    row.addToTail(valueNode->value);
-                    rows2.addToTail(row);
-                    valueNode = valueNode->next;
-                }
-            }
-            current = current->next;
-        }
-    
-        // Создаем все возможные комбинации строк
-        SinglyLinkedList<SinglyLinkedList<string>>::FLNode* row1Node = rows1.head;
-        while (row1Node) {
-            SinglyLinkedList<SinglyLinkedList<string>>::FLNode* row2Node = rows2.head;
-            while (row2Node) {
-                SinglyLinkedList<string> newRow = row1Node->value;
-                SinglyLinkedList<string>::FLNode* valueNode = row2Node->value.head;
-                while (valueNode) {
-                    newRow.addToTail(valueNode->value);
-                    valueNode = valueNode->next;
-                }
-                // Добавляем новую строку в результирующую таблицу
-                SinglyLinkedList<string>::FLNode* newRowNode = newRow.head;
-                while (newRowNode) {
-                    resultTable.insert(current->value->key, newRowNode->value);
-                    newRowNode = newRowNode->next;
-                }
-                row2Node = row2Node->next;
-            }
-            row1Node = row1Node->next;
-        }
-    
-        return resultTable;
-    }
-
     void printHashTable() const {
         SinglyLinkedList<KeyValuePair*>::FLNode* current = table.head;
         while (current) {
@@ -520,7 +430,30 @@ void writeHashTableToCSVFile(const string& filename, const HashTable& hashTable)
 
     file.close();
 }
+// Функция для чтения таблицы из файла и разбиения строк на элементы
+SinglyLinkedList<SinglyLinkedList<string>> readRowsFromFile(const string& filename) {
+    ifstream file(filename);
+    string line;
+    SinglyLinkedList<SinglyLinkedList<string>> table;
 
+    // Читаем файл построчно
+    while (getline(file, line)) {
+        SinglyLinkedList<string> row;
+        stringstream ss(line);
+        string item;
+
+        // Разбиваем строку на элементы по запятым
+        while (getline(ss, item, ',')) {
+            row.addToTail(item);
+        }
+
+        // Добавляем строку в таблицу
+        table.addToTail(row);
+    }
+
+    file.close();
+    return table;
+}
 // Функция для создания директорий и файлов по схеме json
 void createDirectoryAndFiles(const string& schemaName, const json& structure) {
     // Создаем директорию с названием схемы
@@ -530,6 +463,10 @@ void createDirectoryAndFiles(const string& schemaName, const json& structure) {
     for (const auto& table : structure) {
         string tableName = table["name"];
         SinglyLinkedList<string> columns;
+
+        // Добавляем колонку с первичным ключом
+        string pkColumnName = tableName + "_pk";
+        columns.addToTail(pkColumnName);
 
         // Заполняем SinglyLinkedList названиями колонок
         for (const auto& column : table["columns"]) {
@@ -559,6 +496,61 @@ void createDirectoryAndFiles(const string& schemaName, const json& structure) {
         } else {
             cerr << "Failed to create file: " << filePath << endl;
         }
+
+        // Создаем файл для хранения текущего первичного ключа
+        fs::path pkSequencePath = tablePath / (pkColumnName + "_sequence");
+        ofstream pkFile(pkSequencePath);
+        if (pkFile.is_open()) {
+            pkFile << "1" << endl; // Начальное значение первичного ключа
+            pkFile.close();
+            cout << "Created file: " << pkSequencePath << endl;
+        } else {
+            cerr << "Failed to create file: " << pkSequencePath << endl;
+        }
+
+        // Создаем файл для блокировки таблицы
+        fs::path lockPath = tablePath / (tableName + "_lock");
+        ofstream lockFile(lockPath);
+        if (lockFile.is_open()) {
+            lockFile << "unlocked" << endl; // Начальное состояние - разблокировано
+            lockFile.close();
+            cout << "Created file: " << lockPath << endl;
+        } else {
+            cerr << "Failed to create file: " << lockPath << endl;
+        }
+    }
+}
+// Функция для блокировки таблицы
+bool lockTable(const fs::path& tablePath, const string& tableName) {
+    fs::path lockPath = tablePath / (tableName + "_lock");
+    ifstream lockFile(lockPath);
+    string lockStatus;
+    lockFile >> lockStatus;
+    lockFile.close();
+
+    if (lockStatus == "locked") {
+        return false; // Таблица уже заблокирована
+    }
+
+    ofstream lockFileOut(lockPath);
+    if (lockFileOut.is_open()) {
+        lockFileOut << "locked" << endl;
+        lockFileOut.close();
+        return true; // Таблица успешно заблокирована
+    } else {
+        cerr << "Failed to lock table: " << tableName << endl;
+        return false;
+    }
+}
+// Функция для разблокировки таблицы
+void unlockTable(const fs::path& tablePath, const string& tableName) {
+    fs::path lockPath = tablePath / (tableName + "_lock");
+    ofstream lockFileOut(lockPath);
+    if (lockFileOut.is_open()) {
+        lockFileOut << "unlocked" << endl;
+        lockFileOut.close();
+    } else {
+        cerr << "Failed to unlock table: " << tableName << endl;
     }
 }
 
@@ -619,15 +611,48 @@ void parseInsertCommand(const string& command, string& tableName, SinglyLinkedLi
 
 // Функция для вставки данных в таблицу
 void insertIntoTable(const string& schemaName, const string& tableName, const SinglyLinkedList<string>& values) {
-    fs::path filePath = fs::path(schemaName) / tableName / "1.csv";
-    ofstream file(filePath, ios::app); // Открываем файл в режиме добавления
+    fs::path tablePath = fs::path(schemaName) / tableName;
+    fs::path filePath = tablePath / "1.csv";
+    fs::path pkSequencePath = tablePath / (tableName + "_pk_sequence");
+
+    // Блокируем таблицу
+    if (!lockTable(tablePath, tableName)) {
+        cerr << "Table is locked. Cannot insert." << endl;
+        return;
+    }
+
+    // Читаем текущее значение первичного ключа
+    ifstream pkFile(pkSequencePath);
+    int pkValue = 1;
+    if (pkFile.is_open()) {
+        pkFile >> pkValue;
+        pkFile.close();
+    }
+
+    // Увеличиваем значение первичного ключа
+    pkValue++;
+
+    // Записываем новое значение первичного ключа
+    ofstream pkFileOut(pkSequencePath);
+    if (pkFileOut.is_open()) {
+        pkFileOut << pkValue << endl;
+        pkFileOut.close();
+    } else {
+        cerr << "Failed to update primary key sequence file." << endl;
+        unlockTable(tablePath, tableName);
+        return;
+    }
+
+    // Открываем файл таблицы в режиме добавления
+    ofstream file(filePath, ios::app);
     if (file.is_open()) {
+        // Записываем первичный ключ
+        file << pkValue;
+
+        // Записываем остальные значения
         SinglyLinkedList<string>::FLNode* valueNode = values.head;
         while (valueNode) {
-            file << valueNode->value;
-            if (valueNode->next) {
-                file << ",";
-            }
+            file << "," << valueNode->value;
             valueNode = valueNode->next;
         }
         file << endl; // Добавляем перевод строки в конце
@@ -636,6 +661,9 @@ void insertIntoTable(const string& schemaName, const string& tableName, const Si
     } else {
         cerr << "Failed to open file: " << filePath << endl;
     }
+
+    // Разблокируем таблицу
+    unlockTable(tablePath, tableName);
 }
 
 // Функция для парсинга команды DELETE FROM
@@ -678,16 +706,78 @@ void parseDeleteCommand(const string& command, string& tableName, string& column
 
 // Функция для удаления данных из таблицы
 void deleteFromTable(const string& schemaName, const string& tableName, const string& columnName, const string& value) {
-    fs::path filePath = fs::path(schemaName) / tableName / "1.csv";
+    fs::path tablePath = fs::path(schemaName) / tableName;
+    fs::path filePath = tablePath / "1.csv";
+
+    // Блокируем таблицу
+    if (!lockTable(tablePath, tableName)) {
+        cerr << "Table is locked. Cannot delete." << endl;
+        return;
+    }
+
     HashTable hashTable = readHashTableFromCSVFile(filePath.string());
     hashTable.printHashTable();
     hashTable.deleteRows(columnName, value);
     writeHashTableToCSVFile(filePath.string(), hashTable);
     cout << "Deleted from table: " << tableName << endl;
+
+    // Разблокируем таблицу
+    unlockTable(tablePath, tableName);
 }
 
-// Функция для парсинга команды SELECT FROM
-void parseSelectCommand(const string& command, SinglyLinkedList<string>& columns, SinglyLinkedList<string>& tables) {
+// Функция для чтения таблицы из файла и разбиения строк на элементы
+SinglyLinkedList<SinglyLinkedList<string>> readRowsFromFile(const string& filename, SinglyLinkedList<string>& headers) {
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cerr << "Failed to open file: " << filename << endl;
+        throw runtime_error("File open error");
+    }
+
+    string line;
+    SinglyLinkedList<SinglyLinkedList<string>> table;
+
+    // Читаем первую строку как заголовки
+    if (getline(file, line)) {
+        stringstream ss(line);
+        string item;
+        while (getline(ss, item, ',')) {
+            headers.addToTail(item);
+        }
+    }
+
+    // Читаем файл построчно
+    while (getline(file, line)) {
+        SinglyLinkedList<string> row;
+        stringstream ss(line);
+        string item;
+
+        // Разбиваем строку на элементы по запятым
+        while (getline(ss, item, ',')) {
+            row.addToTail(item);
+        }
+
+        // Добавляем строку в таблицу
+        table.addToTail(row);
+    }
+
+    file.close();
+    return table;
+}
+
+// Структура для хранения условия WHERE
+struct WhereCondition {
+    string tableName;
+    string columnName;
+    string operatorType;
+    string value;
+    bool isAnd;
+    bool isOr;
+
+    WhereCondition(const string& table, const string& column, const string& op, const string& val, bool andOp, bool orOp)
+        : tableName(table), columnName(column), operatorType(op), value(val), isAnd(andOp), isOr(orOp) {}
+};
+
+void parseSelectCommand(const string& command, SinglyLinkedList<string>& columns, SinglyLinkedList<string>& tables, SinglyLinkedList<WhereCondition>& whereConditions) {
     int i = 0;
     string column;
     string table;
@@ -708,12 +798,13 @@ void parseSelectCommand(const string& command, SinglyLinkedList<string>& columns
     }
     columns.addToTail(column);
     i++;
+
     // Пропускаем "FROM "
     while (command[i] != '\0' && command[i] != ' ') i++;
     i++;
 
     // Получаем таблицы
-    while (command[i] != '\0') {
+    while (command[i] != '\0' && command[i] != ' ') {
         if (command[i] == ',') {
             tables.addToTail(table);
             table.clear();
@@ -723,25 +814,182 @@ void parseSelectCommand(const string& command, SinglyLinkedList<string>& columns
         i++;
     }
     tables.addToTail(table);
+    if (command[i] == '\0'){
+        return;
+    }
+    i++;
+
+    string whereSubStr;
+    while (command[i] != '\0' && command[i] != ' '){
+        whereSubStr += command[i];
+        i++;
+    }
+    // Пропускаем "WHERE "
+    if (whereSubStr == "WHERE") {
+        i++;
+
+        while (command[i] != '\0') {
+            string tableName, columnName, operatorType, value;
+            bool isAnd = false, isOr = false;
+
+            // Получаем имя таблицы и колонки
+            while (command[i] != '\0' && command[i] != '.') {
+                tableName += command[i];
+                i++;
+            }
+            i++;
+            while (command[i] != '\0' && command[i] != ' ') {
+                columnName += command[i];
+                i++;
+            }
+            i++;
+
+            // Получаем оператор
+            while (command[i] != '\0' && command[i] != ' ') {
+                operatorType += command[i];
+                i++;
+            }
+            i++;
+
+            // Получаем значение
+            if (command[i] == '\'') {
+                i++;
+                while (command[i] != '\0' && command[i] != '\'') {
+                    value += command[i];
+                    i++;
+                }
+                i++;
+            } else {
+                while (command[i] != '\0' && command[i] != ' ') {
+                    value += command[i];
+                    i++;
+                }
+            }
+
+            // Проверяем на AND или OR
+            if (command.substr(i, 3) == "AND") {
+                isAnd = true;
+                i += 4;
+            } else if (command.substr(i, 2) == "OR") {
+                isOr = true;
+                i += 3;
+            }
+
+            // Добавляем условие в список
+            whereConditions.addToTail(WhereCondition(tableName, columnName, operatorType, value, isAnd, isOr));
+        }
+    }
+}
+
+bool checkRow(const SinglyLinkedList<string>& row, const SinglyLinkedList<WhereCondition>& conditions, const SinglyLinkedList<string>& headers) {
+    SinglyLinkedList<WhereCondition>::FLNode* conditionNode = conditions.head;
+    SinglyLinkedList<string>::FLNode* headerNode = headers.head;
+    SinglyLinkedList<string>::FLNode* rowNode = row.head;
+
+    bool result = true;
+
+    while (conditionNode) {
+        string tableName = conditionNode->value.tableName;
+        string columnName = conditionNode->value.columnName;
+        string operatorType = conditionNode->value.operatorType;
+        string value = conditionNode->value.value;
+        bool isAnd = conditionNode->value.isAnd;
+        bool isOr = conditionNode->value.isOr;
+
+        // Ищем индекс колонки в заголовках
+        int index = 0;
+        while (headerNode) {
+            if (headerNode->value == columnName) {
+                break;
+            }
+            headerNode = headerNode->next;
+            index++;
+        }
+
+        // Проверяем значение строки по индексу колонки
+        bool conditionResult = false;
+        SinglyLinkedList<string>::FLNode* rowNode = row.head;
+        for (int i = 0; i < index && rowNode; ++i) {
+            rowNode = rowNode->next;
+        }
+        if (rowNode) {
+            if (operatorType == "=") {
+                conditionResult = (rowNode->value == value);
+            }
+        }
+
+        if (isAnd) {
+            result = result && conditionResult;
+        } else if (isOr) {
+            result = result || conditionResult;
+        } else {
+            result = conditionResult;
+        }
+
+        // Переходим к следующему условию
+        conditionNode = conditionNode->next;
+    }
+
+    return result;
+}
+
+// Функция для выполнения cross join двух таблиц
+SinglyLinkedList<SinglyLinkedList<string>> crossJoin(const SinglyLinkedList<SinglyLinkedList<string>>& table1, const SinglyLinkedList<SinglyLinkedList<string>>& table2) {
+    SinglyLinkedList<SinglyLinkedList<string>> result;
+
+    SinglyLinkedList<SinglyLinkedList<string>>::FLNode* row1Node = table1.head;
+    while (row1Node) {
+        SinglyLinkedList<SinglyLinkedList<string>>::FLNode* row2Node = table2.head;
+        while (row2Node) {
+            SinglyLinkedList<string> newRow;
+            SinglyLinkedList<string>::FLNode* valueNode1 = row1Node->value.head;
+            while (valueNode1) {
+                newRow.addToTail(valueNode1->value);
+                valueNode1 = valueNode1->next;
+            }
+            SinglyLinkedList<string>::FLNode* valueNode2 = row2Node->value.head;
+            while (valueNode2) {
+                newRow.addToTail(valueNode2->value);
+                valueNode2 = valueNode2->next;
+            }
+            result.addToTail(newRow);
+            row2Node = row2Node->next;
+        }
+        row1Node = row1Node->next;
+    }
+
+    return result;
 }
 
 // Функция для выполнения команды SELECT FROM
-void selectFromTables(const string& schemaName, const SinglyLinkedList<string>& columns, const SinglyLinkedList<string>& tables) {
+void selectFromTables(const string& schemaName, const SinglyLinkedList<string>& columns, const SinglyLinkedList<string>& tables, const SinglyLinkedList<WhereCondition>& whereConditions) {
     if (tables.size() == 0) {
         cout << "No tables specified." << endl;
         return;
     }
 
-    // Загружаем первую таблицу
+    // Список заблокированных таблиц
+    SinglyLinkedList<string> lockedTables;
+
+    // Загружаем первую таблицу и её заголовки
     SinglyLinkedList<string>::FLNode* tableNode = tables.head;
-    fs::path filePath = fs::path(schemaName) / tableNode->value / "1.csv";
-    HashTable resultTable = readHashTableFromCSVFile(filePath.string());
+    fs::path tablePath = fs::path(schemaName) / tableNode->value;
+    fs::path filePath = tablePath / "1.csv";
 
-    // Если таблица всего одна, выбираем нужные колонки
+    // Блокируем таблицу
+    if (!lockTable(tablePath, tableNode->value)) {
+        cerr << "Table is locked. Cannot select." << endl;
+        return;
+    }
+    lockedTables.addToTail(tableNode->value);
+
+    SinglyLinkedList<string> headers;
+    SinglyLinkedList<SinglyLinkedList<string>> resultTable = readRowsFromFile(filePath.string(), headers);
+
+    // Если запрошена всего одна таблица, просто выводим её данные
     if (tables.size() == 1) {
-        HashTable selectedColumnsTable;
-        selectedColumnsTable.setTableSize(1);
-
+        // Определяем индексы нужных колонок
+        SinglyLinkedList<int> columnIndices;
         SinglyLinkedList<string>::FLNode* columnNode = columns.head;
         while (columnNode) {
             string column = columnNode->value;
@@ -750,22 +998,53 @@ void selectFromTables(const string& schemaName, const SinglyLinkedList<string>& 
                 string tableName = column.substr(0, dotPos);
                 string columnName = column.substr(dotPos + 1);
 
-                // Проверяем, что таблица соответствует текущей таблице
-                if (tableName == tableNode->value) {
-                    // Добавляем колонку в результирующую хеш-таблицу
-                    SinglyLinkedList<string> values = resultTable.get(columnName);
-                    SinglyLinkedList<string>::FLNode* valueNode = values.head;
-                    while (valueNode) {
-                        selectedColumnsTable.insert(columnName, valueNode->value);
-                        valueNode = valueNode->next;
+                // Ищем индекс колонки в заголовках
+                SinglyLinkedList<string>::FLNode* headerNode = headers.head;
+                int index = 0;
+                while (headerNode) {
+                    if (headerNode->value == columnName) {
+                        columnIndices.addToTail(index);
+                        break;
                     }
+                    headerNode = headerNode->next;
+                    index++;
                 }
             }
             columnNode = columnNode->next;
         }
 
-        // Выводим результирующую хеш-таблицу
-        selectedColumnsTable.printHashTable();
+        // Выводим заголовки нужных колонок
+        SinglyLinkedList<string>::FLNode* headerNode = headers.head;
+        int index = 0;
+        while (headerNode) {
+            if (columnIndices.search(index)) {
+                cout << headerNode->value << " ";
+            }
+            headerNode = headerNode->next;
+            index++;
+        }
+        cout << endl;
+
+        // Выводим результирующую таблицу с нужными колонками
+        SinglyLinkedList<SinglyLinkedList<string>>::FLNode* rowNode = resultTable.head;
+        while (rowNode) {
+            if (checkRow(rowNode->value, whereConditions, headers)) {
+                SinglyLinkedList<string>::FLNode* itemNode = rowNode->value.head;
+                index = 0;
+                while (itemNode) {
+                    if (columnIndices.search(index)) {
+                        cout << itemNode->value << " ";
+                    }
+                    itemNode = itemNode->next;
+                    index++;
+                }
+                cout << endl;
+            }
+            rowNode = rowNode->next;
+        }
+
+        // Разблокируем таблицу
+        unlockTable(tablePath, tableNode->value);
         return;
     }
 
@@ -773,39 +1052,36 @@ void selectFromTables(const string& schemaName, const SinglyLinkedList<string>& 
     tableNode = tableNode->next;
     while (tableNode) {
         fs::path nextFilePath = fs::path(schemaName) / tableNode->value / "1.csv";
-        HashTable nextTable = readHashTableFromCSVFile(nextFilePath.string());
+        SinglyLinkedList<string> nextHeaders;
+        SinglyLinkedList<SinglyLinkedList<string>> nextTable = readRowsFromFile(nextFilePath.string(), nextHeaders);
 
-        // Выполняем cross join
-        HashTable tempTable;
-        tempTable.setTableSize(1);
-
-        SinglyLinkedList<KeyValuePair*>::FLNode* current = resultTable.table.head;
-        while (current) {
-            SinglyLinkedList<string>::FLNode* valueNode = current->value->value.head;
-            while (valueNode) {
-                SinglyLinkedList<KeyValuePair*>::FLNode* nextCurrent = nextTable.table.head;
-                while (nextCurrent) {
-                    SinglyLinkedList<string>::FLNode* nextValueNode = nextCurrent->value->value.head;
-                    while (nextValueNode) {
-                        tempTable.insert(current->value->key, valueNode->value);
-                        tempTable.insert(nextCurrent->value->key, nextValueNode->value);
-                        nextValueNode = nextValueNode->next;
-                    }
-                    nextCurrent = nextCurrent->next;
-                }
-                valueNode = valueNode->next;
+        // Блокируем таблицу
+        if (!lockTable(fs::path(schemaName) / tableNode->value, tableNode->value)) {
+            cerr << "Table is locked. Cannot select." << endl;
+            // Разблокируем все заблокированные таблицы
+            SinglyLinkedList<string>::FLNode* lockedTableNode = lockedTables.head;
+            while (lockedTableNode) {
+                unlockTable(fs::path(schemaName) / lockedTableNode->value, lockedTableNode->value);
+                lockedTableNode = lockedTableNode->next;
             }
-            current = current->next;
+            return;
+        }
+        lockedTables.addToTail(tableNode->value);
+
+        // Объединяем заголовки
+        SinglyLinkedList<string>::FLNode* headerNode = nextHeaders.head;
+        while (headerNode) {
+            headers.addToTail(headerNode->value);
+            headerNode = headerNode->next;
         }
 
-        resultTable = tempTable;
+        // Выполняем cross join
+        resultTable = crossJoin(resultTable, nextTable);
         tableNode = tableNode->next;
     }
 
-    // Выбираем нужные колонки из результата cross join
-    HashTable selectedColumnsTable;
-    selectedColumnsTable.setTableSize(1);
-
+    // Определяем индексы нужных колонок
+    SinglyLinkedList<int> columnIndices;
     SinglyLinkedList<string>::FLNode* columnNode = columns.head;
     while (columnNode) {
         string column = columnNode->value;
@@ -814,87 +1090,104 @@ void selectFromTables(const string& schemaName, const SinglyLinkedList<string>& 
             string tableName = column.substr(0, dotPos);
             string columnName = column.substr(dotPos + 1);
 
-            // Добавляем колонку в результирующую хеш-таблицу
-            SinglyLinkedList<string> values = resultTable.get(columnName);
-            SinglyLinkedList<string>::FLNode* valueNode = values.head;
-            while (valueNode) {
-                selectedColumnsTable.insert(columnName, valueNode->value);
-                valueNode = valueNode->next;
+            // Ищем индекс колонки в заголовках
+            SinglyLinkedList<string>::FLNode* headerNode = headers.head;
+            int index = 0;
+            while (headerNode) {
+                if (headerNode->value == columnName) {
+                    columnIndices.addToTail(index);
+                    break;
+                }
+                headerNode = headerNode->next;
+                index++;
             }
         }
         columnNode = columnNode->next;
     }
 
-    // Выводим результирующую хеш-таблицу
-    selectedColumnsTable.printHashTable();
+    // Выводим заголовки нужных колонок
+    SinglyLinkedList<string>::FLNode* headerNode = headers.head;
+    int index = 0;
+    while (headerNode) {
+        if (columnIndices.search(index)) {
+            cout << headerNode->value << " ";
+        }
+        headerNode = headerNode->next;
+        index++;
+    }
+    cout << endl;
+
+    // Выводим результирующую таблицу с нужными колонками
+    SinglyLinkedList<SinglyLinkedList<string>>::FLNode* rowNode = resultTable.head;
+    while (rowNode) {
+        if (checkRow(rowNode->value, whereConditions, headers)) {
+            SinglyLinkedList<string>::FLNode* itemNode = rowNode->value.head;
+            index = 0;
+            while (itemNode) {
+                if (columnIndices.search(index)) {
+                    cout << itemNode->value << " ";
+                }
+                itemNode = itemNode->next;
+                index++;
+            }
+            cout << endl;
+        }
+        rowNode = rowNode->next;
+    }
+
+    // Разблокируем все заблокированные таблицы
+    SinglyLinkedList<string>::FLNode* lockedTableNode = lockedTables.head;
+    while (lockedTableNode) {
+        unlockTable(fs::path(schemaName) / lockedTableNode->value, lockedTableNode->value);
+        lockedTableNode = lockedTableNode->next;
+    }
 }
-
 int main() {
-    //// Путь к файлу конфигурации
-    //string configFilePath = "schema.json";
-//
-    //// Открываем файл конфигурации
-    //ifstream configFile(configFilePath);
-//
-    //// Читаем JSON из файла
-    //json config;
-    //configFile >> config;
-//
-    //// Получаем название схемы и структуру таблиц
-    //string schemaName = config["name"];
-    //json structure = config["structure"];
-//
-    //// Создаем директории и файлы
-    ////createDirectoryAndFiles(schemaName, structure);
-//
-    //// Ожидаем ввода команд из консоли
-    //while (true) {
-    //    cout << "Enter command (or 'exit' to quit): ";
-    //    string command;
-    //    getline(cin, command);
-//
-    //    if (command == "exit") {
-    //        break;
-    //    }
-//
-    //    if (command.substr(0, 12) == "INSERT INTO ") {
-    //        string tableName;
-    //        SinglyLinkedList<string> values;
-    //        parseInsertCommand(command, tableName, values);
-    //        insertIntoTable(schemaName, tableName, values);
-    //    } else if (command.substr(0, 12) == "DELETE FROM ") {
-    //        string tableName, columnName, value;
-    //        parseDeleteCommand(command, tableName, columnName, value);
-    //        deleteFromTable(schemaName, tableName, columnName, value);
-    //    } else if (command.substr(0, 7) == "SELECT ") {
-    //        SinglyLinkedList<string> columns;
-    //        SinglyLinkedList<string> tables;
-    //        parseSelectCommand(command, columns, tables);
-    //        selectFromTables(schemaName, columns, tables);
-    //    } else {
-    //        cout << "Unknown command" << endl;
-    //    }
-    //}
-    HashTable tableA;
-    tableA.setTableSize(1);
-    tableA.insert("ID", "1");
-    tableA.insert("Name", "Alice");
-    tableA.insert("ID", "2");
-    tableA.insert("Name", "Bob");
+    // Путь к файлу конфигурации
+    string configFilePath = "schema.json";
 
-    HashTable tableB;
-    tableB.setTableSize(1);
-    tableB.insert("ID", "1");
-    tableB.insert("City", "New York");
-    tableB.insert("ID", "2");
-    tableB.insert("City", "Los Angeles");
+    // Открываем файл конфигурации
+    ifstream configFile(configFilePath);
 
-    // Выполняем cross join
-    HashTable resultTable;
-    resultTable.setTableSize(1);
-    resultTable = tableA.crossJoin(tableB);
+    // Читаем JSON из файла
+    json config;
+    configFile >> config;
 
-    // Выводим результат
-    resultTable.printHashTable();
+    // Получаем название схемы и структуру таблиц
+    string schemaName = config["name"];
+    json structure = config["structure"];
+
+    // Создаем директории и файлы
+    //createDirectoryAndFiles(schemaName, structure);
+
+    // Ожидаем ввода команд из консоли
+    while (true) {
+        cout << "Enter command (or 'exit' to quit): ";
+        string command;
+        getline(cin, command);
+
+        if (command == "exit") {
+            break;
+        }
+
+        if (command.substr(0, 12) == "INSERT INTO ") {
+            string tableName;
+            SinglyLinkedList<string> values;
+            parseInsertCommand(command, tableName, values);
+            insertIntoTable(schemaName, tableName, values);
+        } else if (command.substr(0, 12) == "DELETE FROM ") {
+            string tableName, columnName, value;
+            parseDeleteCommand(command, tableName, columnName, value);
+            deleteFromTable(schemaName, tableName, columnName, value);
+        } else if (command.substr(0, 7) == "SELECT ") {
+            SinglyLinkedList<string> columns;
+            SinglyLinkedList<string> tables;
+            SinglyLinkedList<WhereCondition> whereConditions;
+            parseSelectCommand(command, columns, tables, whereConditions);
+            selectFromTables(schemaName, columns, tables, whereConditions);
+        } else {
+            cout << "Unknown command" << endl;
+        }
+    }
     return 0;
 }

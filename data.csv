@@ -1,4 +1,4 @@
-array=first,second
-dlist=first,third
-test=1,2
-slist=third,second
+id,name,city,age,country
+1,Alice,Detroit,25,Russia
+2,Bob,New York,30,USA
+3,Carl,Lox,18,LA
