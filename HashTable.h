@@ -1,36 +1,36 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 
 using namespace std;
 
+template <typename T>
 // Структура для хранения пары ключ-значение
 struct KeyValuePair {
-    string key;
-    string value;
+    T key;
+    T value;
     KeyValuePair* next;
 
-    KeyValuePair(const string& k, const string& v) : key(k), value(v), next(nullptr) {}
+    KeyValuePair(const T& k, const T& v) : key(k), value(v), next(nullptr) {}
 };
 
+template <typename T>
 // Динамический массив для хранения указателей на KeyValuePair
 struct DynamicArray {
-    KeyValuePair** array;
+    KeyValuePair<T>** array;
     int size;
     int capacity;
 
     DynamicArray(int initialCapacity = 10) : size(0), capacity(initialCapacity) {
-        array = new KeyValuePair*[capacity];
+        array = new KeyValuePair<T>*[capacity];
         for (int i = 0; i < capacity; ++i) {
             array[i] = nullptr;
         }
     }
 
-    ~DynamicArray() {
-        delete[] array;
-    }
-
     void resize(int newCapacity) {
-        KeyValuePair** newArray = new KeyValuePair*[newCapacity];
+        KeyValuePair<T>** newArray = new KeyValuePair<T>*[newCapacity];
         for (int i = 0; i < size; ++i) {
             newArray[i] = array[i];
         }
@@ -42,21 +42,21 @@ struct DynamicArray {
         capacity = newCapacity;
     }
 
-    void add(KeyValuePair* element) {
+    void add(KeyValuePair<T>* element) {
         if (size == capacity) {
             resize(capacity * 2);
         }
         array[size++] = element;
     }
 
-    KeyValuePair* get(int index) const {
+    KeyValuePair<T>* get(int index) const {
         if (index < 0 || index >= capacity) {
             return nullptr;
         }
         return array[index];
     }
 
-    void set(int index, KeyValuePair* element) {
+    void set(int index, KeyValuePair<T>* element) {
         if (index < 0 || index >= capacity) {
             return;
         }
@@ -72,10 +72,11 @@ struct DynamicArray {
     }
 };
 
+template <typename T>
 struct HashTable {
-    DynamicArray table; // Динамический массив для хранения списков KeyValuePair
+    DynamicArray<T> table; // Динамический массив для хранения списков KeyValuePair
 
-    // Хеш-функция
+    // Хеш-функция для строк
     int hashFunction(const string& key) const {
         int hash = 0;
         for (char c : key) {
@@ -83,13 +84,16 @@ struct HashTable {
         }
         return hash % table.getCapacity();
     }
-
+    // Хеш-функция для чисел
+    int hashFunction(const int& key) const {
+        return key % table.getCapacity();
+    }
     HashTable() : table(10) {} // Инициализация с начальной емкостью 10
 
     // Вставка пары ключ-значение в хеш-таблицу
-    void insert(const string& key, const string& value) {
+    void insert(const T& key, const T& value) {
         int index = hashFunction(key);
-        KeyValuePair* current = table.get(index);
+        KeyValuePair<T>* current = table.get(index);
 
         // Проверяем, существует ли уже элемент с таким ключом
         while (current != nullptr) {
@@ -102,7 +106,7 @@ struct HashTable {
         }
 
         // Если ключ не найден, добавляем новый элемент
-        KeyValuePair* newPair = new KeyValuePair(key, value);
+        KeyValuePair<T>* newPair = new KeyValuePair<T>(key, value);
         if (table.get(index) == nullptr) {
             // Если ячейка пуста, просто добавляем новую пару
             table.set(index, newPair);
@@ -113,10 +117,24 @@ struct HashTable {
         }
     }
 
+    //// Получение значения по ключу
+    //T get(const T& key) const {
+    //    int index = hashFunction(key);
+    //    KeyValuePair<T>* current = table.get(index);
+//
+    //    while (current != nullptr) {
+    //        if (current->key == key) {
+    //            return current->value;
+    //        }
+    //        current = current->next;
+    //    }
+//
+    //    return "Key not found";
+    //}
     // Получение значения по ключу
-    string get(const string& key) const {
+    T get(const T& key) const {
         int index = hashFunction(key);
-        KeyValuePair* current = table.get(index);
+        KeyValuePair<T>* current = table.get(index);
 
         while (current != nullptr) {
             if (current->key == key) {
@@ -125,14 +143,14 @@ struct HashTable {
             current = current->next;
         }
 
-        return "Key not found";
+        return T(); // Возвращаем значение по умолчанию, если ключ не найден
     }
 
     // Удаление пары ключ-значение по ключу
-    void remove(const string& key) {
+    void remove(const T& key) {
         int index = hashFunction(key);
-        KeyValuePair* current = table.get(index);
-        KeyValuePair* prev = nullptr;
+        KeyValuePair<T>* current = table.get(index);
+        KeyValuePair<T>* prev = nullptr;
 
         while (current != nullptr && current->key != key) {
             prev = current;
@@ -154,24 +172,12 @@ struct HashTable {
 
         delete current;
     }
-
-    // Деструктор для очистки памяти
-    ~HashTable() {
-        for (int i = 0; i < table.getCapacity(); ++i) {
-            KeyValuePair* current = table.get(i);
-            while (current != nullptr) {
-                KeyValuePair* next = current->next;
-                delete current;
-                current = next;
-            }
-        }
-    }
 };
 // Функция для чтения хеш-таблицы из файла
-HashTable readHashTableFromFile(const string& filename, const string& hashTableName) {
+HashTable<string> readHashTableFromFile(const string& filename, const string& hashTableName) {
     ifstream file(filename);
     string line;
-    HashTable hashTable;
+    HashTable<string> hashTable;
 
     while (getline(file, line)) {
         if (line.find(hashTableName + "=") == 0) {
@@ -195,7 +201,7 @@ HashTable readHashTableFromFile(const string& filename, const string& hashTableN
 }
 
 // Функция для записи хеш-таблицы в файл
-void writeHashTableToFile(const string& filename, const string& hashTableName, const HashTable& hashTable) {
+void writeHashTableToFile(const string& filename, const string& hashTableName, const HashTable<string>& hashTable) {
     ifstream file(filename);
     stringstream buffer;
     string line;
@@ -206,7 +212,7 @@ void writeHashTableToFile(const string& filename, const string& hashTableName, c
             buffer << hashTableName << "=";
             bool firstElement = true;
             for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
-                KeyValuePair* current = hashTable.table.get(i);
+                KeyValuePair<string>* current = hashTable.table.get(i);
                 while (current) {
                     if (!firstElement) {
                         buffer << ",";
@@ -227,7 +233,7 @@ void writeHashTableToFile(const string& filename, const string& hashTableName, c
         buffer << hashTableName << "=";
         bool firstElement = true;
         for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
-            KeyValuePair* current = hashTable.table.get(i);
+            KeyValuePair<string>* current = hashTable.table.get(i);
             while (current) {
                 if (!firstElement) {
                     buffer << ",";
