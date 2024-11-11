@@ -5,7 +5,7 @@
 #include "LinkedLists.h"
 #include "Queue.h"
 #include "Stack.h"
-#include "HashTable.h"
+#include "Set.h"
 #include "CompleteBinaryTree.h"
 
 using namespace std;
@@ -302,14 +302,14 @@ int main() {
             string hashTableName, key, value;
             cin >> hashTableName >> key >> value;
 
-            HashTable hashTable = readHashTableFromFile(filename, hashTableName);
+            HashTable<string> hashTable = readHashTableFromFile(filename, hashTableName);
             hashTable.insert(key, value);
             writeHashTableToFile(filename, hashTableName, hashTable);
         } else if (command == "HGET") {
             string hashTableName, key;
             cin >> hashTableName >> key;
 
-            HashTable hashTable = readHashTableFromFile(filename, hashTableName);
+            HashTable<string> hashTable = readHashTableFromFile(filename, hashTableName);
             string value = hashTable.get(key);
             cout << "Value: " << value << endl;
         } else if (command == "HREMOVE") {
@@ -323,9 +323,9 @@ int main() {
             string hashTableName;
             cin >> hashTableName;
 
-            HashTable hashTable = readHashTableFromFile(filename, hashTableName);
+            HashTable<string> hashTable = readHashTableFromFile(filename, hashTableName);
             for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
-                KeyValuePair* current = hashTable.table.get(i);
+                KeyValuePair<string>* current = hashTable.table.get(i);
                 while (current) {
                     cout << current->key << ":" << current->value << " ";
                     current = current->next;
@@ -365,6 +365,36 @@ int main() {
 
             CompleteBinaryTree tree = readTreeFromFile(filename, treeName);
             tree.print();
+        }   else if (command == "STADD") {
+            string setName, value;
+            cin >> setName >> value;
+
+            Set<string> set = readSetFromFile<string>(filename, setName);
+            set.add(value);
+            writeSetToFile<string>(filename, setName, set);
+        } else if (command == "STREM") {
+            string setName, value;
+            cin >> setName >> value;
+
+            Set<string> set = readSetFromFile<string>(filename, setName);
+            set.remove(value);
+            writeSetToFile<string>(filename, setName, set);
+        } else if (command == "STSEARCH") {
+            string setName, value;
+            cin >> setName >> value;
+
+            Set<string> set = readSetFromFile<string>(filename, setName);
+            if (set.contains(value)) {
+                cout << "Value found." << endl;
+            } else {
+                cout << "Value not found." << endl;
+            }
+        } else if (command == "STPRINT") {
+            string setName;
+            cin >> setName;
+
+            Set<string> set = readSetFromFile<string>(filename, setName);
+            set.print();
         } else if (command == "EXIT") {
             break;
         } else {

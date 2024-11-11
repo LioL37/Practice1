@@ -136,3 +136,40 @@ public:
         return elements + size;
     }
 };
+
+template <typename T>
+Set<T> readSetFromFile(const string& filename, const string& setName) {
+    ifstream file(filename);
+    Set<T> set;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(setName + ":") == 0) {
+            found = true;
+            break;
+        }
+    }
+
+    if (found) {
+        stringstream ss(line.substr(setName.length() + 1));
+        T item;
+        while (ss >> item) {
+            set.add(item);
+        }
+    }
+
+    file.close();
+    return set;
+}
+
+template <typename T>
+void writeSetToFile(const string& filename, const string& setName, const Set<T>& set) {
+    ofstream file(filename, ios::app);
+    file << setName << ": ";
+    for (int i = 0; i < set.getSize(); ++i) {
+        file << set[i] << " ";
+    }
+    file << endl;
+    file.close();
+}

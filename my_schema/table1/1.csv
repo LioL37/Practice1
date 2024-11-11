@@ -1,4 +1,4 @@
-id,name,city,age,country
-1,Alice,Detroit,25,Russia
-2,Bob,New York,30,USA
-3,Carl,Lox,18,LA 
+table1_pk,id,name,country
+2,1,Alice,Russia
+3,2,Bob,USA
+4,3,Carl,Canada2
