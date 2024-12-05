@@ -1,8 +1,11 @@
 #include <iostream>
-//#include "LinkedLists.h"
+#include <stdexcept>  // Для использования std::runtime_error
+#include "LinkedLists.h"
 using namespace std;
+
 template<typename T>
-struct Queue {
+class Queue {
+    public:
     DoublyLinkedList<T> list;
 
     // Добавление элемента в конец очереди
@@ -12,6 +15,9 @@ struct Queue {
 
     // Удаление элемента из начала очереди
     T pop() {
+        if (isEmpty()) {
+            throw std::runtime_error("Queue is empty");
+        }
         T value = list.head->value;
         list.removeFromHead();
         return value;
@@ -19,6 +25,9 @@ struct Queue {
 
     // Чтение элемента из начала очереди
     T peek() const {
+        if (isEmpty()) {
+            throw std::runtime_error("Queue is empty");
+        }
         return list.head->value;
     }
 
@@ -26,71 +35,14 @@ struct Queue {
     bool isEmpty() const {
         return list.head == nullptr;
     }
+
+    // Сериализация в бинарный файл
+    void serialize(const string& filename) const {
+        list.serialize(filename);
+    }
+
+    // Десериализация из бинарного файла
+    void deserialize(const string& filename) {
+        list.deserialize(filename);
+    }
 };
-
-// Функция для чтения очереди из файла
-Queue<string> readQueueFromFile(const string& filename, const string& queueName) {
-    ifstream file(filename);
-    string line;
-    Queue<string> queue;
-
-    while (getline(file, line)) {
-        if (line.find(queueName + "=") == 0) {
-            string data = line.substr(queueName.length() + 1);
-            stringstream ss(data);
-            string item;
-            while (getline(ss, item, ',')) {
-                queue.push(item);
-            }
-            break;
-        }
-    }
-
-    file.close();
-    return queue;
-}
-
-// Функция для записи очереди в файл
-void writeQueueToFile(const string& filename, const string& queueName, const Queue<string>& queue) {
-    ifstream file(filename);
-    stringstream buffer;
-    string line;
-    bool found = false;
-
-    while (getline(file, line)) {
-        if (line.find(queueName + "=") == 0) {
-            buffer << queueName << "=";
-            DoublyLinkedList<string>::DLNode* current = queue.list.head;
-            while (current) {
-                buffer << current->value;
-                if (current->next) {
-                    buffer << ",";
-                }
-                current = current->next;
-            }
-            buffer << endl;
-            found = true;
-        } else {
-            buffer << line << endl;
-        }
-    }
-
-    if (!found) {
-        buffer << queueName << "=";
-        DoublyLinkedList<string>::DLNode* current = queue.list.head;
-        while (current) {
-            buffer << current->value;
-            if (current->next) {
-                buffer << ",";
-            }
-            current = current->next;
-        }
-        buffer << endl;
-    }
-
-    file.close();
-
-    ofstream outfile(filename);
-    outfile << buffer.str();
-    outfile.close();
-}

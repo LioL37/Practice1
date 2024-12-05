@@ -220,9 +220,6 @@ void insertIntoTable(const string& schemaName, const string& tableName, const Si
         return;
     }
 
-    // Блокируем таблицу с использованием lock_guard
-    lock_guard<mutex> lock(tableMutexes[tableName]);
-
     // Читаем текущее значение первичного ключа
     ifstream pkFile(pkSequencePath);
     int pkValue = 1;
@@ -302,15 +299,13 @@ void parseDeleteCommand(const string& command, string& tableName, Expression*& w
 void deleteFromTable(const string& schemaName, const string& tableName, Expression* whereClause, map<string, mutex>& tableMutexes) {
     fs::path tablePath = fs::path(schemaName) / tableName;
     fs::path filePath = tablePath / "1.csv";
-    
+
+    lock_guard<mutex> lock(tableMutexes[tableName]);
     // Блокируем таблицу
     if (!lockTable(tablePath, tableName)) {
         cerr << "Table is locked. Cannot delete." << endl;
         return;
     }
-
-    // Блокируем таблицу с использованием lock_guard
-    lock_guard<mutex> lock(tableMutexes[tableName]);
 
     // Читаем таблицу из файла
     SinglyLinkedList<string> headers;
@@ -445,9 +440,6 @@ Expression* whereClause, SinglyLinkedList<string>& headers, map<string, mutex>& 
     SinglyLinkedList<string>::FLNode* tableNode = tables.head;
     fs::path tablePath = fs::path(schemaName) / tableNode->value;
     fs::path filePath = tablePath / "1.csv";
-
-    // Блокируем таблицу с использованием lock_guard
-    lock_guard<mutex> lock(tableMutexes[tableNode->value]);
 
     // Блокируем таблицу
     if (!lockTable(tablePath, tableNode->value)) {
@@ -628,7 +620,6 @@ void handleRequest(int clientSocket, const string& schemaName, const json& struc
             if (valread <= 0) {
                 // Если не удалось прочитать данные, закрываем соединение
                 close(clientSocket);
-                cout << "Client disconnected. Socket: " << clientSocket << endl;
                 return;
             }
 
@@ -642,7 +633,7 @@ void handleRequest(int clientSocket, const string& schemaName, const json& struc
 
             // Проверяем, является ли запрос командой exit
             if (request == "exit") {
-                cout << "Client requested to exit. Closing connection. Socket: " << clientSocket << endl;
+                cout << "Client requested to exit. Closing connection." << endl;
                 close(clientSocket);
                 return;
             }
@@ -744,18 +735,19 @@ int main() {
     // Создаем TCP-сервер
     int serverSocket, newSocket;
     struct sockaddr_in address;
+    int opt = 1;
     int addrlen = sizeof(address);
 
     // Создаем сокет
-    if ((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) == 0) { // Создается TCP-сокет с использованием IPv4 (AF_INET)
-        perror("socket failed");                                 // и протокола TCP (SOCK_STREAM).
+    if ((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
     // Привязываем сокет к порту 7432
-    address.sin_family = AF_INET; // Используем IPv4
-    address.sin_addr.s_addr = INADDR_ANY; // Принимаем соединения на всех доступных IP-адресах
-    address.sin_port = htons(7432); // Порт 7432, преобразованный в сетевой порядок байтов
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(7432);
 
     if (bind(serverSocket, (struct sockaddr *)&address, sizeof(address)) < 0) {
         perror("bind failed");
@@ -771,18 +763,13 @@ int main() {
     cout << "Server is running and waiting for connections..." << endl;
 
     while (true) {
-        // Принимаем новое подключение и создаем новый сокет
         if ((newSocket = accept(serverSocket, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
             perror("accept");
             exit(EXIT_FAILURE);
         }
 
-        cout << "New client connected. Socket: " << newSocket << endl;
-
         // Создаем новый поток для обработки запроса
         thread(handleRequest, newSocket, schemaName, structure, ref(tableMutexes)).detach();
-        // detach отсоединяет поток от основного потока, ждать его не нужно,
-        // он будет выполняться в фоновом режиме и ресурсы автоматически освободятся после завершения
     }
 
     return 0;

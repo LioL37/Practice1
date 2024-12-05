@@ -2,11 +2,13 @@
 
 using namespace std;
 
-struct Array {
+class Array {
+    private:
     string* data;       // Указатель на строку
     size_t size;        // Текущий размер массива
     size_t capacity;    // Вместимость массива
 
+    public:
     // Увеличиваем вместимость массива, если необходимо
     void resize(size_t new_capacity) {
         string* new_data = new string[new_capacity];
@@ -23,11 +25,6 @@ struct Array {
 
     // Конструктор с начальной вместимостью
     Array(size_t initial_capacity) : data(new string[initial_capacity]), size(0), capacity(initial_capacity) {}
-
-    // Деструктор
-    ~Array() {
-        delete[] data;
-    }
 
     // Добавление элемента в конец массива
     void push_back(const string& value) {

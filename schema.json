@@ -1,13 +1,25 @@
 {
-  "name": "my_schema",
+  "name": "Crypt",
   "structure": [
     {
-      "name": "table1",
-      "columns": ["column1", "column2"]
+      "name": "user",
+      "columns": ["user_id", "username", "key"]
     },
     {
-      "name": "table2",
-      "columns": ["column1", "column2", "column3", "column4"]
+      "name": "user_lot",
+      "columns": ["user_id", "lot_id", "quantity"]
+    },
+    {
+      "name": "order",
+      "columns": ["order_id", "user_id", "pair_id", "quantity", "price", "type", "closed"]
+    },
+    {
+      "name": "lot",
+      "columns": ["lot_id", "name"]
+    },
+    {
+      "name": "pair",
+      "columns": ["pair_id", "first_lot_id", "second_lot_id"]
     }
   ]
 }

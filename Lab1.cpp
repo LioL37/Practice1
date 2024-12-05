@@ -9,7 +9,443 @@
 #include "CompleteBinaryTree.h"
 
 using namespace std;
+// Функция для чтения односвязного списка из файла
+SinglyLinkedList<string> readSinglyLinkedListFromFile(const string& filename, const string& listName) {
+    ifstream file(filename);
+    string line;
+    SinglyLinkedList<string> list;
 
+    while (getline(file, line)) {
+        if (line.find(listName + "=") == 0) {
+            string data = line.substr(listName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                list.addToTail(item);
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return list;
+}
+
+// Функция для записи односвязного списка в файл
+void writeSinglyLinkedListToFile(const string& filename, const string& listName, const SinglyLinkedList<string>& list) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(listName + "=") == 0) {
+            buffer << listName << "=";
+            SinglyLinkedList<string>::FLNode* current = list.head;
+            while (current) {
+                buffer << current->value;
+                if (current->next) {
+                    buffer << ",";
+                }
+                current = current->next;
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << listName << "=";
+        SinglyLinkedList<string>::FLNode* current = list.head;
+        while (current) {
+            buffer << current->value;
+            if (current->next) {
+                buffer << ",";
+            }
+            current = current->next;
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}
+// Функция для чтения двусвязного списка из файла
+DoublyLinkedList<string> readDoublyLinkedListFromFile(const string& filename, const string& listName) {
+    ifstream file(filename);
+    string line;
+    DoublyLinkedList<string> list;
+
+    while (getline(file, line)) {
+        if (line.find(listName + "=") == 0) {
+            string data = line.substr(listName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                list.addToTail(item);
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return list;
+}
+
+// Функция для записи двусвязного списка в файл
+void writeDoublyLinkedListToFile(const string& filename, const string& listName, const DoublyLinkedList<string>& list) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(listName + "=") == 0) {
+            buffer << listName << "=";
+            DoublyLinkedList<string>::DLNode* current = list.head;
+            while (current) {
+                buffer << current->value;
+                if (current->next) {
+                    buffer << ",";
+                }
+                current = current->next;
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << listName << "=";
+        DoublyLinkedList<string>::DLNode* current = list.head;
+        while (current) {
+            buffer << current->value;
+            if (current->next) {
+                buffer << ",";
+            }
+            current = current->next;
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}
+// Функция для чтения очереди из файла
+Queue<string> readQueueFromFile(const string& filename, const string& queueName) {
+    ifstream file(filename);
+    string line;
+    Queue<string> queue;
+
+    while (getline(file, line)) {
+        if (line.find(queueName + "=") == 0) {
+            string data = line.substr(queueName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                queue.push(item);
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return queue;
+}
+
+// Функция для записи очереди в файл
+void writeQueueToFile(const string& filename, const string& queueName, const Queue<string>& queue) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(queueName + "=") == 0) {
+            buffer << queueName << "=";
+            DoublyLinkedList<string>::DLNode* current = queue.list.head;
+            while (current) {
+                buffer << current->value;
+                if (current->next) {
+                    buffer << ",";
+                }
+                current = current->next;
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << queueName << "=";
+        DoublyLinkedList<string>::DLNode* current = queue.list.head;
+        while (current) {
+            buffer << current->value;
+            if (current->next) {
+                buffer << ",";
+            }
+            current = current->next;
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}
+// Функция для чтения стека из файла
+Stack readStackFromFile(const string& filename, const string& stackName) {
+    ifstream file(filename);
+    string line;
+    Stack stack;
+
+    while (getline(file, line)) {
+        if (line.find(stackName + "=") == 0) {
+            string data = line.substr(stackName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                stack.push(item);
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return stack;
+}
+
+// Функция для записи стека в файл
+void writeStackToFile(const string& filename, const string& stackName, const Stack& stack) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(stackName + "=") == 0) {
+            buffer << stackName << "=";
+            Stack tempStack;
+            SinglyLinkedList<string>::FLNode* current = stack.list.head;
+            while (current) {
+                tempStack.push(current->value);
+                current = current->next;
+            }
+            while (!tempStack.isEmpty()) {
+                buffer << tempStack.pop();
+                if (!tempStack.isEmpty()) {
+                    buffer << ",";
+                }
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << stackName << "=";
+        Stack tempStack;
+        SinglyLinkedList<string>::FLNode* current = stack.list.head;
+        while (current) {
+            tempStack.push(current->value);
+            current = current->next;
+        }
+        while (!tempStack.isEmpty()) {
+            buffer << tempStack.pop();
+            if (!tempStack.isEmpty()) {
+                buffer << ",";
+            }
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}
+// Функция для чтения хеш-таблицы из файла
+HashTable<string> readHashTableFromFile(const string& filename, const string& hashTableName) {
+    ifstream file(filename);
+    string line;
+    HashTable<string> hashTable;
+
+    while (getline(file, line)) {
+        if (line.find(hashTableName + "=") == 0) {
+            string data = line.substr(hashTableName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, ',')) {
+                size_t pos = item.find(':');
+                if (pos != string::npos) {
+                    string key = item.substr(0, pos);
+                    string value = item.substr(pos + 1);
+                    hashTable.insert(key, value);
+                }
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return hashTable;
+}
+
+// Функция для записи хеш-таблицы в файл
+void writeHashTableToFile(const string& filename, const string& hashTableName, const HashTable<string>& hashTable) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    while (getline(file, line)) {
+        if (line.find(hashTableName + "=") == 0) {
+            buffer << hashTableName << "=";
+            bool firstElement = true;
+            for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
+                KeyValuePair<string>* current = hashTable.table.get(i);
+                while (current) {
+                    if (!firstElement) {
+                        buffer << ",";
+                    }
+                    buffer << current->key << ":" << current->value;
+                    firstElement = false;
+                    current = current->next;
+                }
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    if (!found) {
+        buffer << hashTableName << "=";
+        bool firstElement = true;
+        for (int i = 0; i < hashTable.table.getCapacity(); ++i) {
+            KeyValuePair<string>* current = hashTable.table.get(i);
+            while (current) {
+                if (!firstElement) {
+                    buffer << ",";
+                }
+                buffer << current->key << ":" << current->value;
+                firstElement = false;
+                current = current->next;
+            }
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}
+// Функция для сохранения дерева в файл
+void writeTreeToFile(const string& filename, const string& treeName, CompleteBinaryTree& tree) {
+    ifstream file(filename);
+    stringstream buffer;
+    string line;
+    bool found = false;
+
+    // Читаем файл построчно
+    while (getline(file, line)) {
+        // Если строка начинается с treeName, обновляем её
+        if (line.find(treeName + "=") == 0) {
+            buffer << treeName << "=";
+            Queue<Node*> q;
+            q.push(tree.root);
+            while (!q.isEmpty()) {
+                Node* current = q.pop();
+                buffer << current->data;
+                if (current->left != nullptr) {
+                    q.push(current->left);
+                }
+                if (current->right != nullptr) {
+                    q.push(current->right);
+                }
+                if (!q.isEmpty()) {
+                    buffer << "-";
+                }
+            }
+            buffer << endl;
+            found = true;
+        } else {
+            buffer << line << endl;
+        }
+    }
+
+    // Если дерево с таким именем не найдено, добавляем его в конец файла
+    if (!found) {
+        buffer << treeName << "=";
+        Queue<Node*> q;
+        q.push(tree.root);
+        while (!q.isEmpty()) {
+            Node* current = q.pop();
+            buffer << current->data;
+            if (current->left != nullptr) {
+                q.push(current->left);
+            }
+            if (current->right != nullptr) {
+                q.push(current->right);
+            }
+            if (!q.isEmpty()) {
+                buffer << "-";
+            }
+        }
+        buffer << endl;
+    }
+
+    file.close();
+
+    // Записываем обновленные данные в файл
+    ofstream outfile(filename);
+    outfile << buffer.str();
+    outfile.close();
+}
+
+// Функция для загрузки дерева из файла
+CompleteBinaryTree readTreeFromFile(const string& filename, const string& treeName) {
+    CompleteBinaryTree tree;
+    ifstream file(filename);
+    string line;
+
+    // Читаем файл построчно
+    while (getline(file, line)) {
+        // Если строка начинается с treeName, парсим её
+        if (line.find(treeName + "=") == 0) {
+            string data = line.substr(treeName.length() + 1);
+            stringstream ss(data);
+            string item;
+            while (getline(ss, item, '-')) {
+                tree.insert(stoi(item));
+            }
+            break;
+        }
+    }
+
+    file.close();
+    return tree;
+}
 // Основной цикл программы
 int main() {
     string filename;

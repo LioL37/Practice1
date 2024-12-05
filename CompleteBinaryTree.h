@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include "Queue.h"
 using namespace std;
 
 // Структура узла бинарного дерева
@@ -13,41 +13,74 @@ struct Node {
 };
 
 // Структура полного бинарного дерева
-struct CompleteBinaryTree {
+class CompleteBinaryTree {
+public:
     Node* root; // Указатель на корень дерева
 
     // Конструктор дерева
     CompleteBinaryTree() : root(nullptr) {}
 
     // Проверка, является ли дерево полным
-    bool isComplete(Node* node, int index, int nodeCount) {
-        if (node == nullptr)
+    bool isComplete() {
+        if (root == nullptr)
             return true;
 
-        if (index >= nodeCount)
-            return false;
+        Queue<Node*> q;
+        q.push(root);
 
-        return (isComplete(node->left, 2 * index + 1, nodeCount) &&
-                isComplete(node->right, 2 * index + 2, nodeCount));
-    }
+        bool flag = false;
 
-    // Проверка, является ли дерево полным
-    bool isComplete() {
-        int nodeCount = countNodes(root);
-        return isComplete(root, 0, nodeCount);
+        while (!q.isEmpty()) {
+            Node* current = q.pop();
+
+            if (current->left) {
+                if (flag)
+                    return false;
+                q.push(current->left);
+            } else {
+                flag = true;
+            }
+
+            if (current->right) {
+                if (flag)
+                    return false;
+                q.push(current->right);
+            } else {
+                flag = true;
+            }
+        }
+
+        return true;
     }
 
     // Подсчет количества узлов в дереве
-    int countNodes(Node* node) {
-        if (node == nullptr)
+    int countNodes() {
+        if (root == nullptr)
             return 0;
-        return 1 + countNodes(node->left) + countNodes(node->right);
+
+        int count = 0;
+        Queue<Node*> q;
+        q.push(root);
+
+        while (!q.isEmpty()) {
+            Node* current = q.pop();
+            count++;
+
+            if (current->left)
+                q.push(current->left);
+            if (current->right)
+                q.push(current->right);
+        }
+
+        return count;
     }
 
     // Вставка нового узла в дерево
     void insert(int val) {
+        Node* newNode = new Node(val);
+
         if (root == nullptr) {
-            root = new Node(val);
+            root = newNode;
             return;
         }
 
@@ -58,14 +91,14 @@ struct CompleteBinaryTree {
             Node* current = q.pop();
 
             if (current->left == nullptr) {
-                current->left = new Node(val);
+                current->left = newNode;
                 break;
             } else {
                 q.push(current->left);
             }
 
             if (current->right == nullptr) {
-                current->right = new Node(val);
+                current->right = newNode;
                 break;
             } else {
                 q.push(current->right);
@@ -73,75 +106,82 @@ struct CompleteBinaryTree {
         }
     }
 
-    // Рекурсивное удаление узла по значению
-    Node* deleteRecursive(Node* node, int val) {
-        if (node == nullptr)
-            return node;
-
-        if (val < node->data) {
-            node->left = deleteRecursive(node->left, val);
-        } else if (val > node->data) {
-            node->right = deleteRecursive(node->right, val);
-        } else {
-            if (node->left == nullptr) {
-                Node* temp = node->right;
-                delete node;
-                return temp;
-            } else if (node->right == nullptr) {
-                Node* temp = node->left;
-                delete node;
-                return temp;
-            }
-
-            Queue<Node*> q;
-            q.push(root);
-            Node* lastNode = nullptr;
-            Node* parent = nullptr;
-
-            while (!q.isEmpty()) {
-                Node* current = q.pop();
-
-                if (current->left != nullptr) {
-                    q.push(current->left);
-                    parent = current;
-                    lastNode = current->left;
-                }
-
-                if (current->right != nullptr) {
-                    q.push(current->right);
-                    parent = current;
-                    lastNode = current->right;
-                }
-            }
-
-            node->data = lastNode->data;
-
-            if (parent->right == lastNode) {
-                parent->right = deleteRecursive(lastNode, lastNode->data);
-            } else {
-                parent->left = deleteRecursive(lastNode, lastNode->data);
-            }
-        }
-
-        return node;
-    }
-
     // Удаление узла по значению
     void remove(int val) {
-        root = deleteRecursive(root, val);
+        if (root == nullptr)
+            return;
+
+        Node* nodeToDelete = nullptr;
+        Node* lastNode = nullptr;
+        Node* parentOfLastNode = nullptr;
+
+        Queue<Node*> q;
+        q.push(root);
+
+        while (!q.isEmpty()) {
+            lastNode = q.pop();
+
+            if (lastNode->data == val)
+                nodeToDelete = lastNode;
+
+            if (lastNode->left)
+                q.push(lastNode->left);
+            if (lastNode->right)
+                q.push(lastNode->right);
+        }
+
+        if (nodeToDelete == nullptr)
+            return; // Узел не найден
+
+        // Находим родителя последнего узла
+        q.push(root);
+        while (!q.isEmpty()) {
+            Node* current = q.pop();
+
+            if (current->left == lastNode || current->right == lastNode) {
+                parentOfLastNode = current;
+                break;
+            }
+
+            if (current->left)
+                q.push(current->left);
+            if (current->right)
+                q.push(current->right);
+        }
+
+        // Заменяем значение удаляемого узла на значение последнего узла
+        nodeToDelete->data = lastNode->data;
+
+        // Удаляем последний узел
+        if (parentOfLastNode->right == lastNode) {
+            parentOfLastNode->right = nullptr;
+        } else {
+            parentOfLastNode->left = nullptr;
+        }
+
+        delete lastNode;
     }
 
     // Поиск узла по значению
     bool search(int val) {
-        Node* current = root;
-        while (current != nullptr) {
-            if (val == current->data)
+        if (root == nullptr)
+            return false;
+
+        Queue<Node*> q;
+        q.push(root);
+
+        while (!q.isEmpty()) {
+            Node* current = q.pop();
+
+            if (current->data == val)
                 return true;
-            else if (val < current->data)
-                current = current->left;
-            else
-                current = current->right;
+
+            if (current->left)
+                q.push(current->left);
+            if (current->right)
+                q.push(current->right);
         }
+
         return false;
     }
 
@@ -167,91 +207,67 @@ struct CompleteBinaryTree {
     void print() {
         printTree(root, 0);
     }
-};
 
-// Функция для сохранения дерева в файл
-void writeTreeToFile(const string& filename, const string& treeName, CompleteBinaryTree& tree) {
-    ifstream file(filename);
-    stringstream buffer;
-    string line;
-    bool found = false;
-
-    // Читаем файл построчно
-    while (getline(file, line)) {
-        // Если строка начинается с treeName, обновляем её
-        if (line.find(treeName + "=") == 0) {
-            buffer << treeName << "=";
-            Queue<Node*> q;
-            q.push(tree.root);
-            while (!q.isEmpty()) {
-                Node* current = q.pop();
-                buffer << current->data;
-                if (current->left != nullptr) {
-                    q.push(current->left);
-                }
-                if (current->right != nullptr) {
-                    q.push(current->right);
-                }
-                if (!q.isEmpty()) {
-                    buffer << "-";
-                }
-            }
-            buffer << endl;
-            found = true;
-        } else {
-            buffer << line << endl;
+    // Сериализация дерева в бинарный файл
+    void serialize(const string& filename) const {
+        ofstream outFile(filename, ios::binary);
+        if (!outFile) {
+            throw runtime_error("Failed to open file for writing.");
         }
-    }
 
-    // Если дерево с таким именем не найдено, добавляем его в конец файла
-    if (!found) {
-        buffer << treeName << "=";
+        if (root == nullptr) {
+            outFile.close();
+            return;
+        }
+
         Queue<Node*> q;
-        q.push(tree.root);
+        q.push(root);
+
         while (!q.isEmpty()) {
             Node* current = q.pop();
-            buffer << current->data;
-            if (current->left != nullptr) {
+            outFile.write(reinterpret_cast<const char*>(&current->data), sizeof(current->data));
+
+            if (current->left)
                 q.push(current->left);
-            }
-            if (current->right != nullptr) {
+            if (current->right)
                 q.push(current->right);
-            }
-            if (!q.isEmpty()) {
-                buffer << "-";
-            }
         }
-        buffer << endl;
+
+        outFile.close();
     }
 
-    file.close();
-
-    // Записываем обновленные данные в файл
-    ofstream outfile(filename);
-    outfile << buffer.str();
-    outfile.close();
-}
-
-// Функция для загрузки дерева из файла
-CompleteBinaryTree readTreeFromFile(const string& filename, const string& treeName) {
-    CompleteBinaryTree tree;
-    ifstream file(filename);
-    string line;
-
-    // Читаем файл построчно
-    while (getline(file, line)) {
-        // Если строка начинается с treeName, парсим её
-        if (line.find(treeName + "=") == 0) {
-            string data = line.substr(treeName.length() + 1);
-            stringstream ss(data);
-            string item;
-            while (getline(ss, item, '-')) {
-                tree.insert(stoi(item));
-            }
-            break;
+    // Десериализация дерева из бинарного файла
+    void deserialize(const string& filename) {
+        ifstream inFile(filename, ios::binary);
+        if (!inFile) {
+            throw runtime_error("Failed to open file for reading.");
         }
-    }
 
-    file.close();
-    return tree;
-}
+        int value;
+        if (!inFile.read(reinterpret_cast<char*>(&value), sizeof(value))) {
+            root = nullptr;
+            inFile.close();
+            return;
+        }
+
+        root = new Node(value);
+        Queue<Node*> q;
+        q.push(root);
+
+        while (inFile.read(reinterpret_cast<char*>(&value), sizeof(value))) {
+            Node* current = q.pop();
+
+            current->left = new Node(value);
+            q.push(current->left);
+
+            if (inFile.read(reinterpret_cast<char*>(&value), sizeof(value))) {
+                current->right = new Node(value);
+                q.push(current->right);
+            } else {
+                break;
+            }
+        }
+
+        inFile.close();
+    }
+};

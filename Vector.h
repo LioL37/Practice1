@@ -165,4 +165,51 @@ public:
         }
         cout << endl;
     }
+    
+    // Сериализация строк в бинарный файл
+    void serialize(const string& filename) const {
+        ofstream outFile(filename, ios::binary);
+        if (!outFile) {
+            throw runtime_error("Failed to open file for writing.");
+        }
+
+        // Записываем размер и вместимость
+        outFile.write(reinterpret_cast<const char*>(&size), sizeof(size));
+        outFile.write(reinterpret_cast<const char*>(&capacity), sizeof(capacity));
+
+        // Записываем элементы массива
+        for (int i = 0; i < size; ++i) {
+            size_t length = array[i].size();
+            outFile.write(reinterpret_cast<const char*>(&length), sizeof(length));
+            outFile.write(array[i].c_str(), length);
+        }
+
+        outFile.close();
+    }
+
+    // Десериализация строк из бинарного файла
+    void deserialize(const string& filename) {
+        ifstream inFile(filename, ios::binary);
+        if (!inFile) {
+            throw runtime_error("Failed to open file for reading.");
+        }
+
+        // Читаем размер и вместимость
+        inFile.read(reinterpret_cast<char*>(&size), sizeof(size));
+        inFile.read(reinterpret_cast<char*>(&capacity), sizeof(capacity));
+
+        // Освобождаем текущий массив и выделяем новый
+        delete[] array;
+        array = new T[capacity];
+
+        // Читаем элементы массива
+        for (int i = 0; i < size; ++i) {
+            size_t length;
+            inFile.read(reinterpret_cast<char*>(&length), sizeof(length));
+            array[i].resize(length);
+            inFile.read(&array[i][0], length);
+        }
+
+        inFile.close();
+    }
 };
