@@ -3,7 +3,7 @@
   "structure": [
     {
       "name": "user",
-      "columns": ["user_id", "username", "key"]
+      "columns": ["username", "key"]
     },
     {
       "name": "user_lot",
@@ -11,15 +11,15 @@
     },
     {
       "name": "order",
-      "columns": ["order_id", "user_id", "pair_id", "quantity", "price", "type", "closed"]
+      "columns": ["user_id", "pair_id", "quantity", "price", "type", "closed"]
     },
     {
       "name": "lot",
-      "columns": ["lot_id", "name"]
+      "columns": ["name"]
     },
     {
       "name": "pair",
-      "columns": ["pair_id", "first_lot_id", "second_lot_id"]
+      "columns": ["first_lot_id", "second_lot_id"]
     }
   ]
 }

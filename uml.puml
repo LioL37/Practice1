@@ -1,0 +1,48 @@
+@startuml
+
+' Интерфейс для персонажа
+interface Character {
+    +void display() const
+}
+
+' Интерфейс для фабрики персонажей
+interface CharacterFactory {
+    +unique_ptr<Character> createMage()
+    +unique_ptr<Character> createWarrior()
+}
+
+' Конкретные классы для персонажей
+class EarthMage implements Character {
+    +void display() const
+}
+
+class EarthWarrior implements Character {
+    +void display() const
+}
+
+class WaterMage implements Character {
+    +void display() const
+}
+
+class WaterWarrior implements Character {
+    +void display() const
+}
+
+' Фабрики для создания персонажей
+class EarthCharFactory implements CharacterFactory {
+    +unique_ptr<Character> createMage()
+    +unique_ptr<Character> createWarrior()
+}
+
+class WaterCharFactory implements CharacterFactory {
+    +unique_ptr<Character> createMage()
+    +unique_ptr<Character> createWarrior()
+}
+
+' Связи между классами
+EarthCharFactory --> EarthMage : createMage()
+EarthCharFactory --> EarthWarrior : createWarrior()
+WaterCharFactory --> WaterMage : createMage()
+WaterCharFactory --> WaterWarrior : createWarrior()
+
+@enduml

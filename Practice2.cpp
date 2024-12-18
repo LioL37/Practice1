@@ -29,7 +29,7 @@ void createDirectoryAndFiles(const string& schemaName, const json& structure) {
         SinglyLinkedList<string> columns;
 
         // Добавляем колонку с первичным ключом
-        string pkColumnName = tableName + "_pk";
+        string pkColumnName = tableName + "_id";
         columns.addToTail(pkColumnName);
 
         // Заполняем SinglyLinkedList названиями колонок
@@ -426,7 +426,7 @@ const SinglyLinkedList<SinglyLinkedList<string>>& table2) {
 }
 
 string selectFromTables(const string& schemaName, const SinglyLinkedList<string>& columns, const SinglyLinkedList<string>& tables,
-Expression* whereClause, SinglyLinkedList<string>& headers, map<string, mutex>& tableMutexes) {
+                        Expression* whereClause, SinglyLinkedList<string>& headers, map<string, mutex>& tableMutexes) {
     string result;
 
     if (tables.size() == 0) {
@@ -444,12 +444,6 @@ Expression* whereClause, SinglyLinkedList<string>& headers, map<string, mutex>& 
 
     lock_guard<mutex> lock(tableMutexes[tableNode->value]);
     lockedTables.addToTail(tableNode->value);
-    //// Блокируем таблицу
-    //if (!lockTable(tablePath, tableNode->value)) {
-    //    result = "Table is locked. Cannot select.\n";
-    //    return result;
-    //}
-    //lockedTables.addToTail(tableNode->value);
 
     SinglyLinkedList<SinglyLinkedList<string>> resultTable = readRowsFromFile(filePath.string(), headers);
 
@@ -510,9 +504,7 @@ Expression* whereClause, SinglyLinkedList<string>& headers, map<string, mutex>& 
             rowNode = rowNode->next;
         }
 
-        //// Разблокируем таблицу
-        //unlockTable(tablePath, tableNode->value);
-        //return result;
+        return result;
     }
 
     // Выполняем cross join для каждой следующей таблицы
@@ -524,18 +516,6 @@ Expression* whereClause, SinglyLinkedList<string>& headers, map<string, mutex>& 
 
         lock_guard<mutex> lock(tableMutexes[tableNode->value]);
         lockedTables.addToTail(tableNode->value);
-        //// Блокируем таблицу
-        //if (!lockTable(fs::path(schemaName) / tableNode->value, tableNode->value)) {
-        //    result = "Table is locked. Cannot select.\n";
-        //    // Разблокируем все заблокированные таблицы
-        //    SinglyLinkedList<string>::FLNode* lockedTableNode = lockedTables.head;
-        //    while (lockedTableNode) {
-        //        unlockTable(fs::path(schemaName) / lockedTableNode->value, lockedTableNode->value);
-        //        lockedTableNode = lockedTableNode->next;
-        //    }
-        //    return result;
-        //}
-        //lockedTables.addToTail(tableNode->value);
 
         // Объединяем заголовки
         SinglyLinkedList<string>::FLNode* headerNode = nextHeaders.head;
@@ -604,16 +584,6 @@ Expression* whereClause, SinglyLinkedList<string>& headers, map<string, mutex>& 
         rowNode = rowNode->next;
     }
 
-    //// Разблокируем все заблокированные таблицы
-    //SinglyLinkedList<string>::FLNode* lockedTableNode = lockedTables.head;
-    //while (lockedTableNode) {
-    //    unlockTable(fs::path(schemaName) / lockedTableNode->value, lockedTableNode->value);
-    //    lockedTableNode = lockedTableNode->next;
-    //}
-
-    // Освобождаем память, выделенную для дерева выражений
-    delete whereClause;
-
     return result;
 }
 
@@ -624,6 +594,7 @@ void handleRequest(int clientSocket, const string& schemaName, const json& struc
             int valread = read(clientSocket, buffer, 1024);
             if (valread <= 0) {
                 // Если не удалось прочитать данные, закрываем соединение
+                cout << "Client disconnected. Socket: " << clientSocket << endl;
                 close(clientSocket);
                 return;
             }
@@ -634,11 +605,11 @@ void handleRequest(int clientSocket, const string& schemaName, const json& struc
             request.erase(remove(request.begin(), request.end(), '\r'), request.end());
             request.erase(remove(request.begin(), request.end(), '\n'), request.end());
 
-            cout << "Received request: " << request << endl;
+            cout << "Request from " << clientSocket << ": " << request << endl;
 
             // Проверяем, является ли запрос командой exit
             if (request == "exit") {
-                cout << "Client requested to exit. Closing connection." << endl;
+                cout << "Client requested to exit. Closing connection. Socket: " << clientSocket << endl;
                 close(clientSocket);
                 return;
             }
@@ -774,6 +745,7 @@ int main() {
         }
 
         // Создаем новый поток для обработки запроса
+        cout << "Client connected. Socket: " << newSocket << endl;
         thread(handleRequest, newSocket, schemaName, structure, ref(tableMutexes)).detach();
     }
 

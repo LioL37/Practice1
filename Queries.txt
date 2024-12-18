@@ -1,0 +1,31 @@
+curl -X POST http://localhost:8080/order \
+    -H "X-USER-KEY: 7fe8fea4-52e9-49be-baa8-d258c0ed0a02" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "pair_id": 1,
+        "quantity": 100,
+        "price": 0.015,
+        "type": "buy"
+    }'
+
+curl -X POST http://localhost:8080/user \
+    -H "Content-Type: application/json" \
+    -d '{
+        "username": "LeLe"
+    }'
+
+curl -X GET http://localhost:8080/orders
+
+curl -X DELETE http://localhost:8080/order \
+    -H "X-USER-KEY: 7fe8fea4-52e9-49be-baa8-d258c0ed0a02" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "order_id": 1
+    }'
+
+curl -X GET http://localhost:8080/lots
+
+curl -X GET http://localhost:8080/pairs
+
+curl -X GET http://localhost:8080/balance \
+    -H "X-USER-KEY: 7fe8fea4-52e9-49be-baa8-d258c0ed0a02"

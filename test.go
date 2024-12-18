@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
 	"hash/fnv"
 	"io"
 	"os"
+	"strings"
 )
 
 // KeyValuePair представляет пару ключ-значение
@@ -162,7 +164,7 @@ func (ht *HashTable) Remove(key string) {
 }
 
 // Serialize сериализует хеш-таблицу в бинарный файл
-func (ht *HashTable) Serialize(filename string) error {
+func (ht *HashTable) SerializeBin(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -212,7 +214,7 @@ func (ht *HashTable) Serialize(filename string) error {
 }
 
 // Deserialize десериализует хеш-таблицу из бинарного файла
-func (ht *HashTable) Deserialize(filename string) error {
+func (ht *HashTable) DeserializeBin(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -262,6 +264,61 @@ func (ht *HashTable) Deserialize(filename string) error {
 	return nil
 }
 
+// SerializeText сериализует хеш-таблицу в текстовый файл
+func (ht *HashTable) SerializeTxt(filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	// Записываем каждую пару ключ-значение
+	for i := 0; i < ht.table.Capacity(); i++ {
+		current := ht.table.Get(i)
+		for current != nil {
+			line := fmt.Sprintf("%s:%s\n", current.Key, current.Value)
+			if _, err := writer.WriteString(line); err != nil {
+				return err
+			}
+			current = current.Next
+		}
+	}
+
+	return nil
+}
+
+// DeserializeText десериализует хеш-таблицу из текстового файла
+func (ht *HashTable) DeserializeTxt(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	ht.table = NewDynamicArray(10) // Инициализируем хеш-таблицу с начальной емкостью
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, ":")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid line format: %s", line)
+		}
+		key := parts[0]
+		value := parts[1]
+		ht.Insert(key, value)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 	// Пример использования с хеш-таблицей
 	hashTable := NewHashTable()
@@ -270,20 +327,23 @@ func main() {
 	hashTable.Insert("key3", "value3")
 
 	// Сериализация хеш-таблицы
-	if err := hashTable.Serialize("hashtable.bin"); err != nil {
-		fmt.Println("Error serializing hash table:", err)
-		return
-	}
+	hashTable.SerializeBin("hashtable.bin")
+	hashTable.SerializeTxt("hashtable.txt")
 
 	// Десериализация хеш-таблицы
 	hashTable2 := NewHashTable()
-	if err := hashTable2.Deserialize("hashtable.bin"); err != nil {
-		fmt.Println("Error deserializing hash table:", err)
-		return
-	}
+	hashTable2.DeserializeBin("hashtable.bin")
+
+	// Десериализация хеш-таблицы
+	hashTable3 := NewHashTable()
+	hashTable3.DeserializeTxt("hashtable.txt")
 
 	// Вывод элементов хеш-таблицы
 	fmt.Println("key1:", hashTable2.Get("key1"))
 	fmt.Println("key2:", hashTable2.Get("key2"))
 	fmt.Println("key3:", hashTable2.Get("key3"))
+	fmt.Println("\n")
+	fmt.Println("key1:", hashTable3.Get("key1"))
+	fmt.Println("key2:", hashTable3.Get("key2"))
+	fmt.Println("key3:", hashTable3.Get("key3"))
 }
